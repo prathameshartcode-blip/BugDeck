@@ -470,7 +470,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
                     onClick={async () => {
                       if (newModuleName) {
                         const m = await addModule(newModuleName, "", projectId);
-                        setNewTestCase({...newTestCase, module_id: m.id});
+                        setNewTestCase({...newTestCase, module_id: m?.id});
                         setCreatingModule(false);
                         setNewModuleName("");
                       }
