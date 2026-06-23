@@ -218,7 +218,7 @@ export type CreateTestCaseInput = {
   project_id: string;
   title: string;
   description?: string;
-  type: TestCaseType;
+  type:string;
   priority: TestCasePriority;
   steps: TestStep[];
   expected_result: string;
