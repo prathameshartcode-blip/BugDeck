@@ -17,6 +17,16 @@ module.exports = {
         foreground: 'hsl(210, 15%, 20%)',
         glass: 'rgba(255,255,255,0.2)'
       },
+      fontSize: {
+        'xs': ['0.9375rem', { lineHeight: '1.35rem' }],
+        'sm': ['1.0625rem', { lineHeight: '1.6rem' }],
+        'base': ['1.1875rem', { lineHeight: '1.85rem' }],
+        'lg': ['1.375rem', { lineHeight: '2rem' }],
+        'xl': ['1.5625rem', { lineHeight: '2.15rem' }],
+        '2xl': ['1.8125rem', { lineHeight: '2.4rem' }],
+        '3xl': ['2.1875rem', { lineHeight: '2.7rem' }],
+        '4xl': ['2.5625rem', { lineHeight: '3rem' }],
+      },
       backdropBlur: {
         xs: '2px',
         sm: '4px',
