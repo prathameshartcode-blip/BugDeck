@@ -1,153 +1,195 @@
 "use client";
 
-import React from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { Sparkles, ArrowRight, ShieldCheck, Zap, BarChart3, ChevronRight, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowRight, Kanban, Layers, Download, AlertTriangle } from "lucide-react";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground gradient-hero relative overflow-hidden flex flex-col justify-between">
-      {/* Background radial highlights */}
-      <div className="absolute top-0 left-1/4 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-10 right-1/4 h-[400px] w-[400px] rounded-full bg-indigo-500/5 blur-[100px] pointer-events-none -z-10" />
+    <div className="min-h-screen bg-[#0a0a0a] text-white font-sans">
 
-      {/* Navigation header */}
-      <header className="flex h-16 items-center justify-between px-6 sm:px-12 border-b border-border/40 select-none backdrop-blur-md sticky top-0 z-50 bg-background/70">
+      {/* Nav */}
+      <nav className="flex items-center justify-between px-8 py-5 border-b border-white/8 max-w-6xl mx-auto">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center text-white shadow-sm">
-            <Sparkles className="h-4.5 w-4.5" />
+          <div className="h-6 w-6 rounded bg-white flex items-center justify-center">
+            <span className="text-black text-xs font-black">B</span>
           </div>
-          <span className="font-bold text-base tracking-tight text-gradient">QA Copilot</span>
+          <span className="font-bold text-sm tracking-tight">BugDeck</span>
+        </div>
+        <div className="flex items-center gap-6">
+          <Link href="/login" className="text-sm text-white/50 hover:text-white transition-colors">
+            Log in
+          </Link>
+          <Link
+            href="/signup"
+            className="text-sm font-semibold bg-white text-black px-4 py-2 rounded-lg hover:bg-white/90 transition-colors"
+          >
+            Start free
+          </Link>
+        </div>
+      </nav>
+
+      {/* Hero */}
+      <section className="max-w-6xl mx-auto px-8 pt-24 pb-20 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <div className="space-y-6">
+          <div className="inline-flex items-center gap-2 text-xs font-medium text-amber-400 bg-amber-400/10 border border-amber-400/20 px-3 py-1.5 rounded-full">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+            Bug tracking without the overhead
+          </div>
+
+          <h1 className="text-5xl font-black leading-[1.05] tracking-tight">
+            Track bugs.<br />
+            Ship faster.<br />
+            <span className="text-white/30">Skip Jira.</span>
+          </h1>
+
+          <p className="text-white/50 text-base leading-relaxed max-w-sm">
+            BugDeck is a focused bug tracker for small dev and QA teams. Organize by project and module, drag bugs across status columns, export clean reports.
+          </p>
+
+          <div className="flex items-center gap-4 pt-2">
+            <Link
+              href="/signup"
+              className="inline-flex items-center gap-2 bg-white text-black text-sm font-bold px-5 py-3 rounded-xl hover:bg-white/90 transition-colors"
+            >
+              Get started free <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/login"
+              className="text-sm text-white/40 hover:text-white/70 transition-colors"
+            >
+              Already have an account →
+            </Link>
+          </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <Link href="/login" className="text-xs font-semibold hover:text-primary transition-colors">
-            Login
-          </Link>
-          <Link href="/signup">
-            <Button size="sm" className="h-8 text-xs font-semibold px-4 rounded-lg">
-              Sign Up Free
-            </Button>
+        {/* Kanban preview */}
+        <div className="relative">
+          <div className="rounded-2xl border border-white/10 bg-white/4 p-4 backdrop-blur-sm">
+            <div className="flex items-center gap-1.5 mb-4 pb-3 border-b border-white/8">
+              <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
+              <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
+              <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
+              <span className="ml-3 text-[10px] text-white/20 font-mono">bugdeck.app/projects/mobile-app</span>
+            </div>
+            <div className="flex gap-3 overflow-hidden">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-white/30" />
+                  <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">Backlog</span>
+                  <span className="ml-auto text-[10px] text-white/20">2</span>
+                </div>
+                <div className="space-y-1.5">
+                  <BugCard title="Login fails on Safari" module="Auth" priority="high" />
+                  <BugCard title="Profile image upload 500" module="Settings" priority="medium" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+                  <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">In Progress</span>
+                  <span className="ml-auto text-[10px] text-white/20">2</span>
+                </div>
+                <div className="space-y-1.5">
+                  <BugCard title="OTP not delivered on resend" module="Auth" priority="high" active />
+                  <BugCard title="Dashboard chart flickers" module="Reports" priority="low" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
+                  <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">Resolved</span>
+                  <span className="ml-auto text-[10px] text-white/20">5</span>
+                </div>
+                <div className="space-y-1.5">
+                  <BugCard title="CSV export missing headers" module="Export" priority="medium" done />
+                  <BugCard title="Signup redirect broken" module="Auth" priority="high" done />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="absolute -inset-4 bg-white/3 rounded-3xl blur-2xl -z-10" />
+        </div>
+      </section>
+
+      <div className="max-w-6xl mx-auto px-8"><div className="border-t border-white/8" /></div>
+
+      {/* How it works */}
+      <section className="max-w-6xl mx-auto px-8 py-20">
+        <p className="text-xs font-bold text-white/30 uppercase tracking-widest mb-10">How it works</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 border border-white/8 rounded-2xl overflow-hidden">
+          <Step n="01" title="Create a project" desc="One project per product or codebase. Invite your team or work solo." border />
+          <Step n="02" title="Add modules" desc="Break the project into areas — Auth, Payments, Dashboard. Bugs stay organized." border />
+          <Step n="03" title="Track and export" desc="Drag bugs across columns. Export a CSV for your client or sprint report." />
+        </div>
+      </section>
+
+      <div className="max-w-6xl mx-auto px-8"><div className="border-t border-white/8" /></div>
+
+      {/* Features */}
+      <section className="max-w-6xl mx-auto px-8 py-20">
+        <p className="text-xs font-bold text-white/30 uppercase tracking-widest mb-10">What's inside</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Feature icon={<Kanban className="h-4 w-4" />} title="Kanban board" desc="5 status columns — Backlog, To Test, In Progress, Passed, Failed. Drag and drop bugs between them." />
+          <Feature icon={<Layers className="h-4 w-4" />} title="Module management" desc="Each project can have multiple modules. Filter bugs by module on the board." />
+          <Feature icon={<Download className="h-4 w-4" />} title="CSV export" desc="Export all bugs with module names, priority, and status. Share with clients or PMs." />
+          <Feature icon={<AlertTriangle className="h-4 w-4" />} title="Priority tracking" desc="Mark bugs Low, Medium, or High. Spot critical issues at a glance." />
+        </div>
+      </section>
+
+      {/* CTA strip */}
+      <section className="max-w-6xl mx-auto px-8 pb-20">
+        <div className="rounded-2xl border border-white/10 bg-white/4 px-10 py-12 flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div>
+            <p className="text-xl font-bold">Ready to replace your spreadsheet?</p>
+            <p className="text-white/40 text-sm mt-1">Free to use. No credit card.</p>
+          </div>
+          <Link
+            href="/signup"
+            className="inline-flex items-center gap-2 bg-white text-black text-sm font-bold px-6 py-3 rounded-xl hover:bg-white/90 transition-colors shrink-0"
+          >
+            Create your first project <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-      </header>
-      
+      </section>
 
-      {/* Hero Section */}
-      <main className="flex-1 flex flex-col items-center justify-center text-center px-6 py-20 max-w-5xl mx-auto space-y-8">
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary select-none"
-        >
-          <Sparkles className="h-3.5 w-3.5" />
-          <span>Now in Public Beta</span>
-          <ChevronRight className="h-3 w-3" />
-        </motion.div>
-
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="text-4xl sm:text-6xl font-black tracking-tight leading-none text-foreground max-w-4xl"
-        >
-          AI-Powered Test Case <br />
-          <span className="text-gradient">Generation & Management</span>
-        </motion.h1>
-
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-sm sm:text-lg text-muted-foreground max-w-2xl leading-relaxed font-medium"
-        >
-          Upload your PRD, requirements, or templates. QA Copilot automatically builds complete, production-grade test suites, checklists, and tracking boards.
-        </motion.p>
-
-        {/* CTAs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="flex flex-wrap gap-4 items-center justify-center select-none pt-4"
-        >
-          <Link href="/signup">
-            <Button size="lg" className="rounded-xl font-bold flex gap-2 h-12 px-6">
-              <span>Get Started Free</span>
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
-          <Link href="/dashboard">
-            <Button size="lg" variant="outline" className="rounded-xl font-bold h-12 px-6">
-              View Interactive Demo
-            </Button>
-          </Link>
-        </motion.div>
-
-        {/* Feature Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.4 }}
-          className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-16 text-left w-full"
-        >
-          <div className="p-6 rounded-2xl border border-border bg-card hover:border-primary/30 transition-all space-y-3">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary w-fit">
-              <Zap className="h-5 w-5" />
-            </div>
-            <h3 className="font-bold text-sm">Instant Checklist Generator</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Analyzes requirements document in seconds to detect modules, workflows, forms, and report requirements.
-            </p>
-          </div>
-
-          <div className="p-6 rounded-2xl border border-border bg-card hover:border-primary/30 transition-all space-y-3">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary w-fit">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-            <h3 className="font-bold text-sm">Multi-Category Testing</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Generates functional paths, validation boundary checks, security assertions (XSS, Injection), and Edge cases.
-            </p>
-          </div>
-
-          <div className="p-6 rounded-2xl border border-border bg-card hover:border-primary/30 transition-all space-y-3">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary w-fit">
-              <BarChart3 className="h-5 w-5" />
-            </div>
-            <h3 className="font-bold text-sm">Live Coverage Heatmap</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Track passes, failures, and blocks on a visual heatmap without importing to third-party dashboards.
-            </p>
-          </div>
-        </motion.div>
-
-        {/* Social Proof */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="pt-12 select-none"
-        >
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-4">
-            Trusted by developers & QA teams globally
-          </span>
-          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 opacity-50 text-xs font-bold text-muted-foreground">
-            <span>VERCEL</span>
-            <span>NOTION</span>
-            <span>LINEAR</span>
-            <span>RAYCAST</span>
-          </div>
-        </motion.div>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-border/40 py-6 text-center select-none shrink-0 bg-card/25 text-xs text-muted-foreground">
-        <p>© 2026 QA Copilot. Built for modern software delivery. All rights reserved.</p>
+      <footer className="border-t border-white/8 py-6 text-center text-xs text-white/20">
+        © 2026 BugDeck. Built for dev and QA teams.
       </footer>
+    </div>
+  );
+}
+
+function BugCard({ title, module, priority, active, done }: {
+  title: string; module: string; priority: "low" | "medium" | "high"; active?: boolean; done?: boolean;
+}) {
+  const priorityColor = { low: "text-white/30", medium: "text-amber-400/70", high: "text-red-400/80" }[priority];
+  return (
+    <div className={`rounded-lg border p-2 space-y-1.5 ${active ? "border-blue-400/30 bg-blue-400/5" : done ? "border-white/5 bg-white/2 opacity-50" : "border-white/8 bg-white/4"}`}>
+      <p className={`text-[10px] font-medium leading-snug ${done ? "line-through text-white/30" : "text-white/80"}`}>{title}</p>
+      <div className="flex items-center justify-between">
+        <span className="text-[9px] text-white/25 bg-white/8 px-1.5 py-0.5 rounded">{module}</span>
+        <span className={`text-[9px] font-semibold uppercase ${priorityColor}`}>{priority}</span>
+      </div>
+    </div>
+  );
+}
+
+function Step({ n, title, desc, border }: { n: string; title: string; desc: string; border?: boolean; }) {
+  return (
+    <div className={`p-8 space-y-3 ${border ? "border-r border-white/8" : ""}`}>
+      <span className="text-xs font-mono text-white/20">{n}</span>
+      <p className="font-bold text-sm">{title}</p>
+      <p className="text-xs text-white/40 leading-relaxed">{desc}</p>
+    </div>
+  );
+}
+
+function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string; }) {
+  return (
+    <div className="rounded-xl border border-white/8 bg-white/3 p-6 space-y-3 hover:border-white/15 transition-colors">
+      <div className="text-white/40">{icon}</div>
+      <p className="font-bold text-sm">{title}</p>
+      <p className="text-xs text-white/40 leading-relaxed">{desc}</p>
     </div>
   );
 }

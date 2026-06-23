@@ -27,7 +27,7 @@ export const Header: React.FC = () => {
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6 shrink-0 z-30 select-none">
       {/* Project Switcher / Breadcrumbs */}
       <div className="flex items-center gap-3">
-        <DropdownMenu>
+        {/* <DropdownMenu>
           <DropdownMenuTrigger onClick={() => setProjectOpen(!projectOpen)}>
             <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-accent transition-colors">
               <Folder className="h-4 w-4 text-primary" />
@@ -72,26 +72,26 @@ export const Header: React.FC = () => {
         <span className="text-muted-foreground text-sm">/</span>
         <span className="text-sm font-medium text-muted-foreground truncate max-w-[200px]">
           QA Portal
-        </span>
+        </span> */}
       </div>
 
       {/* Right side items */}
       <div className="flex items-center gap-4">
         {/* Search Bar */}
-        <div className="relative w-64 max-md:hidden">
+        {/* <div className="relative w-64 max-md:hidden">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <input
             type="search"
             placeholder="Search test cases, modules..."
             className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
-        </div>
+        </div> */}
 
         {/* Alerts Bell */}
-        <button className="p-2 rounded-lg border border-border hover:bg-accent hover:text-accent-foreground transition-colors relative">
+        {/* <button className="p-2 rounded-lg border border-border hover:bg-accent hover:text-accent-foreground transition-colors relative">
           <Bell className="h-4 w-4" />
           <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
-        </button>
+        </button> */}
 
         {/* Theme Toggle */}
         <ThemeToggle />

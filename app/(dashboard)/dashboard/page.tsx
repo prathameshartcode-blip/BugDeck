@@ -152,9 +152,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Activities Feed */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <RecentActivity activities={MOCK_ACTIVITIES} />
-      </div>
+      </div> */}
     </div>
   );
 }
