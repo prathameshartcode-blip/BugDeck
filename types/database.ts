@@ -79,10 +79,11 @@ export type TestCase = {
   screenshot_url: string | null;
   notes: string | null;
   created_by: string;
+  type: TestCaseType;
   created_at: string;
   updated_at: string;
 };
-
+export type TestCaseType = "functional" | "performance" | "security" | "usability";
 /** A testing checklist that groups individual checklist items. */
 export type Checklist = {
   id: string;
@@ -218,7 +219,7 @@ export type CreateTestCaseInput = {
   project_id: string;
   title: string;
   description?: string;
-  type:string;
+  type: TestCaseType;
   priority: TestCasePriority;
   steps: TestStep[];
   expected_result: string;

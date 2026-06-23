@@ -315,14 +315,14 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
       in_progress_count: working,
       coverage_percentage: coverage,
       status_counts: { open, working, reopen, todiscuss, closed },
-      type_counts: {
-        functional: allCases.filter((tc) => tc.type === "functional").length,
-        validation: allCases.filter((tc) => tc.type === "validation").length,
-        security: allCases.filter((tc) => tc.type === "security").length,
-        uat: allCases.filter((tc) => tc.type === "uat").length,
-        regression: allCases.filter((tc) => tc.type === "regression").length,
-        edge: allCases.filter((tc) => tc.type === "edge").length,
-      },
+      // type_counts: {
+      //   functional: allCases.filter((tc) => tc.type === "functional").length,
+      //   validation: allCases.filter((tc) => tc.type === "validation").length,
+      //   security: allCases.filter((tc) => tc.type === "security").length,
+      //   uat: allCases.filter((tc) => tc.type === "uat").length,
+      //   regression: allCases.filter((tc) => tc.type === "regression").length,
+      //   edge: allCases.filter((tc) => tc.type === "edge").length,
+      // },
     });
   },
 }));

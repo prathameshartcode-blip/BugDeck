@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { BoardColumn } from "./board-column";
 import { useBoardStore } from "@/store/board-store";
-import type { TestCase, TestCaseStatus, TestCasePriority } from "@/types/database";
+import type { TestCase, TestCaseStatus, TestCasePriority, TestCaseType } from "@/types/database";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -126,7 +126,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
     await createTestCase({
       title: newTestCase.title,
       description: newTestCase.description || null,
-     
+      type: newTestCase.type as TestCaseType,
       priority: newTestCase.priority as TestCasePriority,
       expected_result: newTestCase.expected_result || "",
       module_id: newTestCase.module_id,
@@ -138,7 +138,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
       actual_result: null,
     });
     setIsCreateOpen(false);
-    setNewTestCase({ title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_url: "" });
+    setNewTestCase({ title: "", description: "", type: "functional", priority: "medium", expected_result: "", module_id: "", screenshot_url: "" });
     setNewSteps([]);
   };
 
@@ -262,7 +262,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
               <DialogHeader>
                 <div className="flex items-center gap-2 mb-1">
                   <Badge variant="outline" className="capitalize text-[10px]">
-                   
+                    {selectedTestCase.type}
                   </Badge>
                   <Badge className="capitalize text-[10px]">
                     {selectedTestCase.priority} Priority
