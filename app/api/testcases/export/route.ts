@@ -17,22 +17,18 @@ export async function GET(req: NextRequest) {
   }
 
   const priorityFilter = req.nextUrl.searchParams.get('priority') || 'all';
-  const moduleFilter = req.nextUrl.searchParams.get('module') || 'all';
-    const statusFilter = req.nextUrl.searchParams.get('status') || 'all'; 
+  const moduleFilter   = req.nextUrl.searchParams.get('module')   || 'all';
+  const statusFilter   = req.nextUrl.searchParams.get('status')   || 'all';
 
   let query = supabase
     .from('cards')
     .select('*, modules(name)')
-    .eq('project_id', projectId);
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: true });
 
-  if (priorityFilter !== 'all') {
-    query = query.eq('priority', priorityFilter);
-  }
-  if (moduleFilter !== 'all') {
-    query = query.eq('module_id', moduleFilter);
-  }if (statusFilter !== 'all') { // NEW: Add status filter
-    query = query.eq('column_id', statusFilter);
-  }
+  if (priorityFilter !== 'all') query = query.eq('priority', priorityFilter);
+  if (moduleFilter   !== 'all') query = query.eq('module_id', moduleFilter);
+  if (statusFilter   !== 'all') query = query.eq('column_id', statusFilter);
 
   const { data: testCases, error } = await query;
 
@@ -40,52 +36,41 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // All columns — matches exactly what the import expects
   const headers = [
-    // 'Bug ID',
-    // 'Title',
-        'Module',
-    'Created At',
-    
-    'Description',
-        'Steps',
-            'Expected Result',
-    // 'Priority',
+    'Bug ID',
+    'Title',
+    'Module',
     'Status',
-
-
-
-    // 'Actual Result',
-    // 'Notes',
+    'Priority',
+    'Description',
+    'Steps',
+    'Expected Result',
+    'Actual Result',
+    'Notes',
     'Screenshot URL',
-
+    'Created At',
   ];
 
   const rows = (testCases || []).map((tc: any) => [
-    // escapeCsv(tc.id),
-    // escapeCsv(tc.title),
-        escapeCsv(tc.modules?.name || ''),
-          escapeCsv(tc.created_at || ''),
-    
-    escapeCsv(tc.description || ''),
-      escapeCsv((tc.steps || []).map((s: any, i: number) => `${s.order || i + 1}. ${s.action}`).join(' | ')),
-          escapeCsv(tc.expected_result || ''),
-    // escapeCsv(tc.priority),
+    escapeCsv(tc.id),
+    escapeCsv(tc.title || ''),
+    escapeCsv(tc.modules?.name || ''),
     escapeCsv(tc.column_id || 'open'),
-
-  
-
-    // escapeCsv(tc.actual_result || ''),
-    // escapeCsv(tc.notes || ''),
+    escapeCsv(tc.priority || 'medium'),
+    escapeCsv(tc.description || ''),
+    escapeCsv((tc.steps || []).map((s: any, i: number) => `${s.order || i + 1}. ${s.action}`).join(' | ')),
+    escapeCsv(tc.expected_result || ''),
+    escapeCsv(tc.actual_result || ''),
+    escapeCsv(tc.notes || ''),
     escapeCsv(tc.screenshot_url || ''),
-  
+    escapeCsv(tc.created_at || ''),
   ]);
 
-  const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
 
-  // Add BOM for Excel to recognize UTF-8
-  const bom = '\uFEFF';
-
-  return new NextResponse(bom + csvContent, {
+  // UTF-8 BOM so Excel opens it correctly
+  return new NextResponse('\uFEFF' + csvContent, {
     status: 200,
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',

@@ -1,243 +1,170 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useProjectStore } from "@/store/project-store";
+import { ArrowLeft, Plus } from "lucide-react";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import { useBoardStore } from "@/store/board-store";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useProjectStore } from "@/store/project-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { FolderKanban, Plus, FolderOpen } from "lucide-react";
+import { Dialog } from "@/components/ui/dialog";
+import { BoardColumn } from "@/components/board/board-column";
+import { TestCaseCard } from "@/components/board/test-case-card";
+import { ImportButton } from "@/components/board/import-button";
+import type { TestCase, TestStatus } from "@/types/database";
 
-export default function ProjectDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const projectId = params.projectId as string;
+const COLUMNS: { id: TestStatus; label: string; color: string }[] = [
+  { id: "backlog",      label: "Backlog",      color: "bg-gray-100 text-gray-600"   },
+  { id: "to_test",     label: "To Test",       color: "bg-blue-100 text-blue-600"   },
+  { id: "in_progress", label: "In Progress",   color: "bg-yellow-100 text-yellow-600" },
+  { id: "passed",      label: "Passed",        color: "bg-green-100 text-green-600" },
+  { id: "failed",      label: "Failed",        color: "bg-red-100 text-red-600"     },
+];
 
-  const { projects, selectProject } = useProjectStore();
-  const { testCases, modules, addModule, fetchBoardData } = useBoardStore();
+export default function BoardPage() {
+  const params    = useParams();
+  const router    = useRouter();
+  const projectId = params.id as string;
 
-  const [activeTab, setActiveTab] = useState<"overview" | "modules">("overview");
-  
-  // Module Creation form state
-  const [newModuleName, setNewModuleName] = useState("");
-  const [newModuleDesc, setNewModuleDesc] = useState("");
-  const [isAddingModule, setIsAddingModule] = useState(false);
+  const { projects }                                                         = useProjectStore();
+  const { testCases, loading, fetchTestCases, createTestCase, updateStatus } = useBoardStore();
 
-  const currentProject = projects.find((p) => p.id === projectId);
+  const [open,     setOpen]     = useState(false);
+  const [title,    setTitle]    = useState("");
+  const [desc,     setDesc]     = useState("");
+  const [priority, setPriority] = useState<TestCase["priority"]>("medium");
+  const [creating, setCreating] = useState(false);
+  const [activeCard, setActiveCard] = useState<TestCase | null>(null);
 
-  useEffect(() => {
-    if (projectId) {
-      selectProject(projectId);
-      fetchBoardData(projectId);
-    }
-  }, [projectId, selectProject, fetchBoardData]);
+  const project = projects.find((p) => p.id === projectId);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  if (!currentProject) {
-    return (
-      <div className="flex h-64 items-center justify-center text-sm text-muted-foreground select-none">
-        Project not found.
-      </div>
-    );
-  }
+  useEffect(() => { fetchTestCases(projectId); }, [projectId, fetchTestCases]);
 
-  const handleCreateModule = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newModuleName.trim()) return;
-    setIsAddingModule(true);
-    try {
-      await addModule(newModuleName.trim(), newModuleDesc.trim(), projectId);
-      setNewModuleName("");
-      setNewModuleDesc("");
-    } catch (err) {
-      console.error("Failed to add module:", err);
-    } finally {
-      setIsAddingModule(false);
-    }
+  const handleDragStart = (e: DragStartEvent) => {
+    setActiveCard(testCases.find((tc) => tc.id === e.active.id) ?? null);
   };
 
-  const projectModules = modules.filter((m) => m.project_id === projectId);
+  const handleDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    setActiveCard(null);
+    if (!over) return;
+    const newStatus = over.id as TestStatus;
+    const card = testCases.find((tc) => tc.id === active.id);
+    if (card && card.status !== newStatus) updateStatus(card.id, newStatus);
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    setCreating(true);
+    await createTestCase(projectId, title.trim(), desc.trim(), priority);
+    setCreating(false);
+    setOpen(false);
+    setTitle("");
+    setDesc("");
+    setPriority("medium");
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Project Banner Header */}
-      <div className="flex flex-col gap-2 p-6 rounded-xl border border-border bg-card select-none">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-foreground">{currentProject.name}</h1>
-          <div className="flex gap-2.5">
-            <Button
-              size="sm"
-              onClick={() => router.push(`/projects/${projectId}/board`)}
-              className="text-xs font-semibold flex gap-1.5 items-center"
+    <div>
+      {/* Header */}
+      <div className="mb-6 flex items-center gap-4">
+        <button onClick={() => router.push("/projects")} className="rounded p-1 hover:bg-muted">
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold">{project?.name ?? "Board"}</h1>
+          {project?.description && (
+            <p className="text-sm text-muted-foreground">{project.description}</p>
+          )}
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-3">
+          <ImportButton
+            projectId={projectId}
+            onImported={() => fetchTestCases(projectId)}
+          />
+          <Button onClick={() => setOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Add Test Case
+          </Button>
+        </div>
+      </div>
+
+      {/* Board */}
+      {loading ? (
+        <div className="flex h-60 items-center justify-center">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      ) : (
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {COLUMNS.map((col) => (
+              <BoardColumn
+                key={col.id}
+                id={col.id}
+                label={col.label}
+                color={col.color}
+                cards={testCases.filter((tc) => tc.status === col.id)}
+              />
+            ))}
+          </div>
+          <DragOverlay>
+            {activeCard ? <TestCaseCard card={activeCard} isDragging /> : null}
+          </DragOverlay>
+        </DndContext>
+      )}
+
+      {/* Create dialog */}
+      <Dialog open={open} onClose={() => setOpen(false)} title="Add Test Case">
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Title *</label>
+            <Input
+              placeholder="e.g. Verify login with valid credentials"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              autoFocus
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Description</label>
+            <Textarea
+              placeholder="Steps or notes..."
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Priority</label>
+            <select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as TestCase["priority"])}
+              className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
-              <FolderOpen className="h-4 w-4" /> Go to Board
-            </Button>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
           </div>
-        </div>
-        <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl font-medium">
-          {currentProject.description || "No description loaded."}
-        </p>
-      </div>
-
-      {/* Tabs list */}
-      <div className="flex border-b border-border text-xs font-semibold select-none">
-        {["overview", "modules"].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab as any)}
-            className={`px-4 py-2 border-b-2 capitalize -mb-px transition-colors ${
-              activeTab === tab
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab Content Panels */}
-      {activeTab === "overview" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 space-y-6 select-none">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Welcome to your project Dashboard</CardTitle>
-                <CardDescription>View statistics and navigate modules.</CardDescription>
-              </CardHeader>
-              <CardContent className="text-xs leading-normal font-medium text-muted-foreground">
-                <p>
-                  Use the tabs above to manage project modules or click "Go to Board" to organize, execute and track your test cases.
-                </p>
-              </CardContent>
-            </Card>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button type="submit" loading={creating}>Add</Button>
           </div>
-
-          {/* Quick Metrics sidebar */}
-          <div className="space-y-6 select-none">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Quick Statistics</CardTitle>
-              </CardHeader>
-              <CardContent className="text-xs space-y-3 font-semibold">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Test Cases:</span>
-                  <span>{currentProject.total_test_cases}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Passed:</span>
-                  <span className="text-emerald-500">{currentProject.passed_count}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Failed (Reopened):</span>
-                  <span className="text-red-500">{currentProject.failed_count}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Overall Coverage:</span>
-                  <span>{currentProject.coverage_percentage}%</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )}
-
-      {activeTab === "modules" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Modules List */}
-          <div className="md:col-span-2 space-y-4">
-            <div className="flex justify-between items-center select-none">
-              <h3 className="text-sm font-bold text-foreground">Project Modules</h3>
-              <span className="text-xs text-muted-foreground font-semibold">
-                {projectModules.length} Modules Loaded
-              </span>
-            </div>
-
-            {projectModules.length === 0 ? (
-              <div className="flex h-36 items-center justify-center border border-dashed border-border/80 rounded-xl text-xs text-muted-foreground select-none">
-                No modules identified. Create a module using the form on the right.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {projectModules.map((mod) => {
-                  const cases = testCases.filter((tc) => tc.module_id === mod.id && tc.project_id === projectId);
-                  
-                  return (
-                    <Card key={mod.id} className="hover:border-primary/20 transition-all select-none">
-                      <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between gap-4">
-                        <div>
-                          <CardTitle className="text-xs font-bold">{mod.name}</CardTitle>
-                          <CardDescription className="text-[10px] line-clamp-2 mt-1 leading-normal">
-                            {mod.description || "No description provided."}
-                          </CardDescription>
-                        </div>
-                        <Badge className="shrink-0 text-[9px]">{cases.length} cases</Badge>
-                      </CardHeader>
-                      <CardContent className="p-4 pt-0 mt-3 flex justify-between items-center border-t border-border/40">
-                        <span className="text-[10px] font-semibold text-muted-foreground">
-                          {cases.filter(c => c.status === "closed").length} closed / {cases.filter(c => c.status === "reopen").length} reopened
-                        </span>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Add Module Sidebar */}
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-1.5">
-                  <FolderKanban className="h-4 w-4 text-primary" /> Create Module
-                </CardTitle>
-                <CardDescription className="text-[10px]">
-                  Add a new component or module to classify test cases.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleCreateModule} className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      Module Name
-                    </label>
-                    <Input
-                      placeholder="e.g. Authentication"
-                      value={newModuleName}
-                      onChange={(e) => setNewModuleName(e.target.value)}
-                      disabled={isAddingModule}
-                      className="text-xs"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      Description
-                    </label>
-                    <Textarea
-                      placeholder="Enter module functionality..."
-                      value={newModuleDesc}
-                      onChange={(e) => setNewModuleDesc(e.target.value)}
-                      disabled={isAddingModule}
-                      className="text-xs h-20 resize-none"
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full text-xs font-bold gap-1 h-9"
-                    disabled={isAddingModule || !newModuleName.trim()}
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Create
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )}
+        </form>
+      </Dialog>
     </div>
   );
 }

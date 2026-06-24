@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { BoardColumn } from "./board-column";
 import { useBoardStore } from "@/store/board-store";
-import type { TestCase, TestCaseStatus, TestCasePriority, TestCaseType } from "@/types/database";
+import type { TestCase, TestCaseStatus, TestCasePriority } from "@/types/database";
+import { ImportButton } from "./import-button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,7 +41,6 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const [newTestCase, setNewTestCase] = useState<Partial<TestCase>>({
     title: "",
     description: "",
-    type: "functional",
     priority: "medium",
     expected_result: "",
     module_id: "",
@@ -55,20 +55,18 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const [activeTab, setActiveTab] = useState<"details" | "steps" | "notes">("details");
 
   // Filters state
-  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [moduleFilter, setModuleFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all"); // NEW: Status filter
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Filtered test cases for the active project
   const projectCases = testCases.filter((tc) => tc.project_id === projectId);
   
   const filteredCases = projectCases.filter((tc) => {
-    const matchesType = typeFilter === "all" || tc.type === typeFilter;
     const matchesPriority = priorityFilter === "all" || tc.priority === priorityFilter;
     const matchesModule = moduleFilter === "all" || tc.module_id === moduleFilter;
-    const matchesStatus = statusFilter === "all" || tc.status === statusFilter; // NEW: Status filter logic
-    return matchesType && matchesPriority && matchesModule && matchesStatus;
+    const matchesStatus = statusFilter === "all" || tc.status === statusFilter;
+    return matchesPriority && matchesModule && matchesStatus;
   });
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
@@ -126,7 +124,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
     await createTestCase({
       title: newTestCase.title,
       description: newTestCase.description || null,
-      type: newTestCase.type as TestCaseType,
+      type: "functional",
       priority: newTestCase.priority as TestCasePriority,
       expected_result: newTestCase.expected_result || "",
       module_id: newTestCase.module_id,
@@ -138,7 +136,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
       actual_result: null,
     });
     setIsCreateOpen(false);
-    setNewTestCase({ title: "", description: "", type: "functional", priority: "medium", expected_result: "", module_id: "", screenshot_url: "" });
+    setNewTestCase({ title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_url: "" });
     setNewSteps([]);
   };
 
@@ -146,10 +144,9 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const getExportUrl = () => {
     const params = new URLSearchParams();
     params.append('projectId', projectId);
-    if (typeFilter !== 'all') params.append('type', typeFilter);
     if (priorityFilter !== 'all') params.append('priority', priorityFilter);
     if (moduleFilter !== 'all') params.append('module', moduleFilter);
-    if (statusFilter !== 'all') params.append('status', statusFilter); // NEW: Add status filter to export
+    if (statusFilter !== 'all') params.append('status', statusFilter);
     return `/api/testcases/export?${params.toString()}`;
   };
 
@@ -173,7 +170,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
             </select>
           </div>
 
-          {/* Status Filter - NEW */}
+          {/* Status Filter */}
           <div className="flex flex-col gap-1">
             <span className="text-[10px] font-bold text-muted-foreground uppercase">Status</span>
             <select
@@ -187,24 +184,6 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
               <option value="closed">Closed</option>
               <option value="reopen">Reopen</option>
               <option value="todiscuss">To Discuss</option>
-            </select>
-          </div>
-
-          {/* Type Filter */}
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase">Test Type</span>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="h-8 rounded-md border border-input bg-background px-2.5 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              <option value="all">All Types</option>
-              <option value="functional">Functional</option>
-              <option value="validation">Validation</option>
-              <option value="security">Security</option>
-              <option value="uat">UAT</option>
-              <option value="regression">Regression</option>
-              <option value="edge">Edge Cases</option>
             </select>
           </div>
 
@@ -229,8 +208,13 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
           <div className="text-xs text-muted-foreground font-medium">
             Showing <span className="text-foreground font-bold">{filteredCases.length}</span> of {projectCases.length} test cases
           </div>
+          {/* Import CSV */}
+          <ImportButton
+            projectId={projectId}
+            onImported={() => fetchBoardData(projectId)}
+          />
           <Button variant="outline" size="sm" className="gap-2" onClick={() => window.open(getExportUrl(), '_blank')}>
-            Export Bug List
+            Export CSV
           </Button>
           <Button onClick={() => setIsCreateOpen(true)} size="sm" className="gap-2">
             <Plus className="h-4 w-4" /> New Test Case
@@ -261,9 +245,6 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
             <>
               <DialogHeader>
                 <div className="flex items-center gap-2 mb-1">
-                  <Badge variant="outline" className="capitalize text-[10px]">
-                    {selectedTestCase.type}
-                  </Badge>
                   <Badge className="capitalize text-[10px]">
                     {selectedTestCase.priority} Priority
                   </Badge>
@@ -484,35 +465,18 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
                 </div>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold">Type</label>
-                <select
-                  value={newTestCase.type}
-                  onChange={(e) => setNewTestCase({ ...newTestCase, type: e.target.value as any })}
-                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <option value="functional">Functional</option>
-                  <option value="validation">Validation</option>
-                  <option value="security">Security</option>
-                  <option value="uat">UAT</option>
-                  <option value="regression">Regression</option>
-                  <option value="edge">Edge Cases</option>
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-semibold">Priority</label>
-                <select
-                  value={newTestCase.priority}
-                  onChange={(e) => setNewTestCase({ ...newTestCase, priority: e.target.value as any })}
-                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <option value="critical">Critical</option>
-                  <option value="high">High</option>
-                  <option value="medium">Medium</option>
-                  <option value="low">Low</option>
-                </select>
-              </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold">Priority</label>
+              <select
+                value={newTestCase.priority}
+                onChange={(e) => setNewTestCase({ ...newTestCase, priority: e.target.value as any })}
+                className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
             </div>
             <div className="space-y-1">
               <label className="text-xs font-semibold">Description</label>

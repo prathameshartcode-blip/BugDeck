@@ -19,7 +19,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
   id,
   title,
   color,
-  testCases,
+  testCases = [],
   onTestCaseClick,
   onDragStart,
   onDropTestCase,
