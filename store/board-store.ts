@@ -77,7 +77,8 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
       const { data: cardsData, error: cardsError } = await supabase
         .from('cards')
         .select('*')
-        .eq('project_id', projectId);
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
 
       if (cardsError) throw cardsError;
 
@@ -155,7 +156,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
         updated_at: newCard.updated_at,
       };
 
-      set((state) => ({ testCases: [...state.testCases, newTestCase] }));
+      set((state) => ({ testCases: [newTestCase, ...state.testCases] }));
       get()._syncProjectStats(input.project_id);
       return newTestCase;
     } catch (err: any) {
