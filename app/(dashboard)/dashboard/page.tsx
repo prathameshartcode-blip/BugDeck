@@ -78,7 +78,7 @@ export default function DashboardPage() {
     { name: "Reopened", value: totalFailed, color: "oklch(0.65 0.25 27.32)" },
     { name: "To Discuss", value: totalBlocked, color: "oklch(0.70 0.22 45)" },
     { name: "Open", value: totalOpen, color: "oklch(0.7 0.02 240)" },
-    { name: "Working", value: totalInProgress, color: "oklch(0.75 0.15 80)" },
+    { name: "Fixed", value: totalInProgress, color: "oklch(0.75 0.15 80)" },
   ];
 
   const currentDate = new Date().toLocaleDateString("en-US", {

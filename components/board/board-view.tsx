@@ -19,7 +19,7 @@ interface BoardViewProps {
 // REORDERED COLUMNS: Open → Working → Closed → Reopen → To Discuss
 const COLUMNS: Array<{ id: TestCaseStatus; title: string; color: string }> = [
   { id: "open", title: "Open", color: "bg-muted-foreground/40" },
-  { id: "working", title: "Working", color: "bg-sky-500" },
+  { id: "Fixed", title: "Fixed", color: "bg-sky-500" },
   { id: "closed", title: "Closed", color: "bg-emerald-500" },
   { id: "reopen", title: "Reopen", color: "bg-amber-500" },
   { id: "todiscuss", title: "To Discuss", color: "bg-red-500" },
@@ -183,7 +183,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
             >
               <option value="all">All Statuses</option>
               <option value="open">Open</option>
-              <option value="working">Working</option>
+              <option value="Fixed">Fixed</option>
               <option value="closed">Closed</option>
               <option value="reopen">Reopen</option>
               <option value="todiscuss">To Discuss</option>
@@ -284,7 +284,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-muted-foreground">Status:</span>
                   <div className="flex gap-1">
-                    {(["open", "working", "closed", "reopen", "todiscuss"] as TestCaseStatus[]).map((st) => (
+                    {(["open", "Fixed", "closed", "reopen", "todiscuss"] as TestCaseStatus[]).map((st) => (
                       <button
                         key={st}
                         onClick={() => handleUpdateStatus(st)}

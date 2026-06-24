@@ -52,7 +52,7 @@ export type TestCasePriority = "critical" | "high" | "medium" | "low";
 /** Kanban board status for a test case. */
 export type TestCaseStatus =
   | "open"
-  | "working"
+  | "Fixed"
   | "reopen"
   | "todiscuss"
   | "closed";
