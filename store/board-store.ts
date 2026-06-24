@@ -303,7 +303,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
     const reopen = allCases.filter((tc) => tc.status === "reopen").length;
     const open = allCases.filter((tc) => tc.status === "open").length;
     const todiscuss = allCases.filter((tc) => tc.status === "todiscuss").length;
-    const working = allCases.filter((tc) => tc.status === "working").length;
+    const Fixed = allCases.filter((tc) => tc.status === "Fixed").length;
     const coverage = total > 0 ? Math.round((closed / total) * 100) : 0;
 
     useProjectStore.getState().updateProjectStats(projectId, {
@@ -312,9 +312,9 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
       failed_count: reopen,
       backlog_count: open,
       blocked_count: todiscuss,
-      in_progress_count: working,
+      in_progress_count: Fixed,
       coverage_percentage: coverage,
-      status_counts: { open, working, reopen, todiscuss, closed },
+      status_counts: { open, Fixed, reopen, todiscuss, closed },
       // type_counts: {
       //   functional: allCases.filter((tc) => tc.type === "functional").length,
       //   validation: allCases.filter((tc) => tc.type === "validation").length,
