@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Upload, CheckCircle, AlertTriangle, Info, X } from "lucide-react";
+import { Upload, CheckCircle, AlertTriangle, Info, X, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
@@ -26,7 +26,9 @@ const EXPECTED_COLUMNS = [
 const EXPECTED_COLUMN_NAMES = EXPECTED_COLUMNS.map((c) => c.name.toLowerCase());
 
 // Map any common status name → our internal board statuses
+// Both keys AND values are lowercase here; we normalize to internal casing after lookup
 const STATUS_MAP: Record<string, string> = {
+  // open-style
   open:          "open",
   backlog:       "open",
   "to test":     "open",
@@ -36,17 +38,21 @@ const STATUS_MAP: Record<string, string> = {
   in_progress:   "open",
   working:       "open",
   assigned:      "open",
+  // fixed / resolved style
   fixed:         "Fixed",
   resolved:      "Fixed",
   passed:        "Fixed",
   verified:      "Fixed",
+  // reopen style
   reopen:        "reopen",
   reopened:      "reopen",
   "re-open":     "reopen",
+  // todiscuss style
   todiscuss:     "todiscuss",
   "to discuss":  "todiscuss",
   discussion:    "todiscuss",
   blocked:       "todiscuss",
+  // closed / done style
   closed:        "closed",
   done:          "closed",
   failed:        "closed",
@@ -54,13 +60,46 @@ const STATUS_MAP: Record<string, string> = {
 
 const VALID_PRIORITIES = ["critical", "high", "medium", "low"];
 
+// CSV template columns (same order as export)
+const TEMPLATE_HEADERS = [
+  "Title",
+  "Module",
+  "Status",
+  "Priority",
+  "Description",
+  "Steps",
+  "Expected Result",
+  "Actual Result",
+  "Notes",
+  "Screenshot URL",
+];
+
 // Case-insensitive column lookup
 function col(row: Record<string, string>, name: string): string {
   const key = Object.keys(row).find((k) => k.toLowerCase() === name.toLowerCase());
   return key ? (row[key] ?? "").trim() : "";
 }
 
-// ── Inline Modal (no external Dialog dependency) ───────────────────
+// Resolve status: lowercase the raw value, look it up in STATUS_MAP
+// If not found, fall back to "open"
+function resolveStatus(rawStatus: string): string {
+  const normalized = rawStatus.trim().toLowerCase();
+  return STATUS_MAP[normalized] ?? "open";
+}
+
+// ── Download empty CSV template ────────────────────────────────────
+function downloadTemplate() {
+  const csvContent = TEMPLATE_HEADERS.join(",") + "\n";
+  const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "bug-import-template.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Inline Modal ───────────────────────────────────────────────────
 function Modal({
   open, onClose, title, className, children,
 }: {
@@ -127,45 +166,71 @@ export function ImportButton({ projectId, onImported }: ImportButtonProps) {
     unmatchedColumns: string[];
   } | null>(null);
 
-  // ── Parse CSV → array of row objects ──────────────────────────
+  // ── Parse CSV → array of row objects (RFC 4180 compliant) ────
+  // Handles multi-line quoted fields correctly — does NOT split on
+  // newlines first, so Steps cells with real \n inside quotes work.
   const parseCsv = (text: string): Record<string, string>[] => {
     // Strip leading BOM if present
     const cleaned = text.replace(/^\uFEFF/, "");
-    const lines = cleaned.split(/\r?\n/).filter((l) => l.trim().length > 0);
-    if (lines.length < 2) return [];
+    if (!cleaned.trim()) return [];
 
-    // Auto-detect delimiter (comma or semicolon)
-    const firstLine = lines[0];
+    // Auto-detect delimiter from first line (before any parsing)
+    const firstLineEnd = cleaned.indexOf("\n");
+    const firstLine = firstLineEnd === -1 ? cleaned : cleaned.slice(0, firstLineEnd);
     const delimiter = firstLine.includes(";") && !firstLine.includes(",") ? ";" : ",";
 
-    // Parse a single line respecting quoted fields
-    const parseLine = (line: string): string[] => {
-      const values: string[] = [];
-      let cur = "", inQuote = false;
-      for (let i = 0; i < line.length; i++) {
-        const ch = line[i];
-        if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
-        else if (ch === '"')                    { inQuote = !inQuote; }
-        else if (ch === delimiter && !inQuote)  { values.push(cur.trim()); cur = ""; }
-        else                                    { cur += ch; }
+    // RFC 4180 character-by-character parser — respects quoted fields
+    // that span multiple lines (real \n inside "..." is kept as-is)
+    const parseAllRows = (src: string): string[][] => {
+      const rows: string[][] = [];
+      let row: string[] = [];
+      let cur = "";
+      let inQuote = false;
+
+      for (let i = 0; i < src.length; i++) {
+        const ch = src[i];
+        const next = src[i + 1];
+
+        if (inQuote) {
+          if (ch === '"' && next === '"') { cur += '"'; i++; }       // escaped quote
+          else if (ch === '"')            { inQuote = false; }        // closing quote
+          else                            { cur += ch; }              // content (incl. \n)
+        } else {
+          if (ch === '"') {
+            inQuote = true;
+          } else if (ch === delimiter) {
+            row.push(cur.trim());
+            cur = "";
+          } else if (ch === "\r" && next === "\n") {
+            row.push(cur.trim()); rows.push(row); row = []; cur = ""; i++;
+          } else if (ch === "\n") {
+            row.push(cur.trim()); rows.push(row); row = []; cur = "";
+          } else {
+            cur += ch;
+          }
+        }
       }
-      values.push(cur.trim());
-      return values;
+      // flush last field / row
+      if (cur || row.length) { row.push(cur.trim()); rows.push(row); }
+      return rows;
     };
 
-    // Strip BOM + quotes from every header, then trim
-    const headers = parseLine(firstLine).map((h) =>
+    const allRows = parseAllRows(cleaned)
+      .filter((r) => r.some((cell) => cell.length > 0)); // skip fully-empty rows
+
+    if (allRows.length < 2) return [];
+
+    // Strip BOM + surrounding quotes from headers, then trim
+    const headers = allRows[0].map((h) =>
       h.replace(/^\uFEFF/, "").replace(/^["']|["']$/g, "").trim()
     );
 
-    return lines.slice(1).map((line) => {
-      const values = parseLine(line);
+    return allRows.slice(1).map((values) => {
       const row: Record<string, string> = {};
       headers.forEach((h, i) => { row[h] = values[i] ?? ""; });
       return row;
     });
   };
-
 
   // ── Handle file selected ───────────────────────────────────────
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -182,7 +247,7 @@ export function ImportButton({ projectId, onImported }: ImportButtonProps) {
       return;
     }
 
-    const fileColumns     = Object.keys(rows[0]);
+    const fileColumns      = Object.keys(rows[0]);
     const unmatchedColumns = fileColumns.filter(
       (fc) =>
         !EXPECTED_COLUMN_NAMES.includes(fc.toLowerCase()) &&
@@ -212,7 +277,7 @@ export function ImportButton({ projectId, onImported }: ImportButtonProps) {
       .filter((m) => m.project_id === projectId)
       .forEach((m) => { moduleMap[m.name.toLowerCase()] = m.id; });
 
-    // ── Insert rows using the same supabase client as the board store ──
+    // ── Insert rows ────────────────────────────────────────────
     setImporting(true);
     let imported = 0;
     let skipped  = 0;
@@ -220,18 +285,16 @@ export function ImportButton({ projectId, onImported }: ImportButtonProps) {
 
     for (let i = 0; i < rows.length; i++) {
       const row    = rows[i];
-      const rowNum = i + 2;
 
-      // Use title from CSV, or fall back to "Bug #N" so no row is ever skipped
+      // Use title from CSV, or fall back to "Bug #N"
       const title = col(row, "Title") || `Bug #${i + 1}`;
 
       // Priority — default medium
       let priority = col(row, "Priority").toLowerCase();
       if (!VALID_PRIORITIES.includes(priority)) priority = "medium";
 
-      // Status — map → internal, default "open"
-      const rawStatus = col(row, "Status").toLowerCase();
-      const status    = STATUS_MAP[rawStatus] ?? "open";
+      // Status — normalize to lowercase before lookup, handles "FixEd", "FIXED", "fixed", etc.
+      const status = resolveStatus(col(row, "Status"));
 
       // Module — match by name (case-insensitive)
       const moduleName = col(row, "Module").toLowerCase();
@@ -247,7 +310,7 @@ export function ImportButton({ projectId, onImported }: ImportButtonProps) {
         project_id:      projectId,
         title,
         description:     col(row, "Description")     || null,
-        column_id:       status,       // same field the board store uses
+        column_id:       status,
         priority,
         module_id:       moduleId,
         steps,
@@ -255,7 +318,6 @@ export function ImportButton({ projectId, onImported }: ImportButtonProps) {
         actual_result:   col(row, "Actual Result")   || null,
         notes:           col(row, "Notes")           || null,
         screenshot_url:  col(row, "Screenshot URL")  || null,
-        // created_by is set only when we have a logged-in user
         ...(user?.id ? { created_by: user.id } : {}),
       };
 
@@ -263,7 +325,7 @@ export function ImportButton({ projectId, onImported }: ImportButtonProps) {
 
       if (error) {
         skipped++;
-        errors.push(`Row ${rowNum}: "${title}" — ${error.message}`);
+        errors.push(`Row ${i + 2}: "${title}" — ${error.message}`);
       } else {
         imported++;
       }
@@ -291,6 +353,17 @@ export function ImportButton({ projectId, onImported }: ImportButtonProps) {
         {importing ? "Importing…" : "Import CSV"}
       </Button>
 
+      {/* Download template button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={downloadTemplate}
+        title="Download empty CSV template"
+      >
+        <Download className="mr-2 h-4 w-4" />
+        Template
+      </Button>
+
       {/* Column guide link */}
       <button
         onClick={() => setGuideOpen(true)}
@@ -307,8 +380,13 @@ export function ImportButton({ projectId, onImported }: ImportButtonProps) {
             Extra columns are ignored. Missing optional columns get default values.
           </p>
 
+          <Button variant="outline" size="sm" onClick={downloadTemplate} className="w-full">
+            <Download className="mr-2 h-4 w-4" />
+            Download empty CSV template
+          </Button>
+
           <div className="rounded-lg border border-border overflow-hidden">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm select-text">
               <thead>
                 <tr className="bg-muted/50 border-b border-border">
                   <th className="text-left px-3 py-2 font-semibold text-xs">Column Name</th>
@@ -346,7 +424,7 @@ export function ImportButton({ projectId, onImported }: ImportButtonProps) {
             </p>
             <p className="text-xs text-muted-foreground">
               <span className="font-medium">Status:</span> open, fixed, closed, reopen, todiscuss
-              <span className="text-muted-foreground/60 ml-1">(also: backlog, passed, failed, working, blocked, in progress…)</span>
+              <span className="text-muted-foreground/60 ml-1">(case-insensitive; also: backlog, passed, failed, working, blocked, in progress…)</span>
             </p>
             <p className="text-xs text-muted-foreground">
               <span className="font-medium">Module:</span> Must match an existing module name in this project.

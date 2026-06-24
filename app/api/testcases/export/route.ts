@@ -56,7 +56,8 @@ export async function GET(req: NextRequest) {
     escapeCsv(tc.id),
     escapeCsv(tc.title || ''),
     escapeCsv(tc.modules?.name || ''),
-    escapeCsv(tc.column_id || 'open'),
+    // Export status as lowercase so re-importing always matches STATUS_MAP correctly
+    escapeCsv((tc.column_id || 'open').toLowerCase()),
     escapeCsv(tc.priority || 'medium'),
     escapeCsv(tc.description || ''),
     escapeCsv((tc.steps || []).map((s: any, i: number) => `${s.order || i + 1}. ${s.action}`).join(' | ')),
