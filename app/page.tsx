@@ -9,11 +9,20 @@ export default function LandingPage() {
 
       {/* Nav */}
       <nav className="flex items-center justify-between px-8 py-5 border-b border-white/8 max-w-6xl mx-auto">
-        <div className="flex items-center gap-2">
-          <div className="h-6 w-6 rounded bg-white flex items-center justify-center">
-            <span className="text-black text-xs font-black">B</span>
+        <div className="flex items-center gap-2.5">
+          <div
+            className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
+            style={{ backgroundColor: "#89295E" }}
+          >
+            <span className="text-white text-sm font-black">A</span>
           </div>
-          <span className="font-bold text-sm tracking-tight">BugDeck</span>
+          <div className="flex items-baseline gap-1.5 leading-none">
+            <span className="font-black text-base tracking-tight text-white">Artcode</span>
+            <span className="text-base font-light text-white/40">·</span>
+            <span className="font-black text-base tracking-tight" style={{ color: "#89295E" }}>
+              BugDeck
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-6">
           <Link href="/login" className="text-sm text-white/50 hover:text-white transition-colors">
@@ -21,7 +30,8 @@ export default function LandingPage() {
           </Link>
           <Link
             href="/signup"
-            className="text-sm font-semibold bg-white text-black px-4 py-2 rounded-lg hover:bg-white/90 transition-colors"
+            className="text-sm font-bold px-4 py-2 rounded-lg text-white hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: "#89295E" }}
           >
             Start free
           </Link>
@@ -31,32 +41,33 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="max-w-6xl mx-auto px-8 pt-24 pb-20 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
         <div className="space-y-6">
-          <div className="inline-flex items-center gap-2 text-xs font-medium text-amber-400 bg-amber-400/10 border border-amber-400/20 px-3 py-1.5 rounded-full">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-            Bug tracking without the overhead
+          <div
+            className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full border"
+            style={{ color: "#89295E", backgroundColor: "rgba(137,41,94,0.08)", borderColor: "rgba(137,41,94,0.25)" }}
+          >
+            <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ backgroundColor: "#89295E" }} />
+            By Artcode Pvt. Ltd.
           </div>
 
           <h1 className="text-5xl font-black leading-[1.05] tracking-tight">
             Track bugs.<br />
             Ship faster.<br />
-            <span className="text-white/30">Skip Jira.</span>
+            <span className="text-white/25">Skip Jira.</span>
           </h1>
 
           <p className="text-white/50 text-base leading-relaxed max-w-sm">
-            BugDeck is a focused bug tracker for small dev and QA teams. Organize by project and module, drag bugs across status columns, export clean reports.
+            Artcode BugDeck is a focused bug tracker for small dev and QA teams. Organize by project and module, drag bugs across status columns, export clean reports.
           </p>
 
           <div className="flex items-center gap-4 pt-2">
             <Link
               href="/signup"
-              className="inline-flex items-center gap-2 bg-white text-black text-sm font-bold px-5 py-3 rounded-xl hover:bg-white/90 transition-colors"
+              className="inline-flex items-center gap-2 text-white text-sm font-bold px-5 py-3 rounded-xl hover:opacity-90 transition-opacity"
+              style={{ backgroundColor: "#89295E" }}
             >
               Get started free <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link
-              href="/login"
-              className="text-sm text-white/40 hover:text-white/70 transition-colors"
-            >
+            <Link href="/login" className="text-sm text-white/40 hover:text-white/70 transition-colors">
               Already have an account →
             </Link>
           </div>
@@ -64,12 +75,12 @@ export default function LandingPage() {
 
         {/* Kanban preview */}
         <div className="relative">
-          <div className="rounded-2xl border border-white/10 bg-white/4 p-4 backdrop-blur-sm">
+          <div className="rounded-2xl border border-white/10 bg-white/4 p-4">
             <div className="flex items-center gap-1.5 mb-4 pb-3 border-b border-white/8">
               <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
               <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
               <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
-              <span className="ml-3 text-[10px] text-white/20 font-mono">bugdeck.app/projects/mobile-app</span>
+              <span className="ml-3 text-[10px] text-white/20 font-mono">artcode-bugdeck.app/projects/mobile-app</span>
             </div>
             <div className="flex gap-3 overflow-hidden">
               <div className="flex-1 min-w-0">
@@ -107,7 +118,7 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-          <div className="absolute -inset-4 bg-white/3 rounded-3xl blur-2xl -z-10" />
+          <div className="absolute -inset-4 rounded-3xl blur-2xl -z-10" style={{ backgroundColor: "rgba(137,41,94,0.07)" }} />
         </div>
       </section>
 
@@ -117,7 +128,7 @@ export default function LandingPage() {
       <section className="max-w-6xl mx-auto px-8 py-20">
         <p className="text-xs font-bold text-white/30 uppercase tracking-widest mb-10">How it works</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 border border-white/8 rounded-2xl overflow-hidden">
-          <Step n="01" title="Create a project" desc="One project per product or codebase. Invite your team or work solo." border />
+          <Step n="01" title="Create a project" desc="One project per product or codebase. Work solo or with your team." border />
           <Step n="02" title="Add modules" desc="Break the project into areas — Auth, Payments, Dashboard. Bugs stay organized." border />
           <Step n="03" title="Track and export" desc="Drag bugs across columns. Export a CSV for your client or sprint report." />
         </div>
@@ -138,23 +149,40 @@ export default function LandingPage() {
 
       {/* CTA strip */}
       <section className="max-w-6xl mx-auto px-8 pb-20">
-        <div className="rounded-2xl border border-white/10 bg-white/4 px-10 py-12 flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div
+          className="rounded-2xl border px-10 py-12 flex flex-col sm:flex-row items-center justify-between gap-6"
+          style={{ borderColor: "rgba(137,41,94,0.3)", backgroundColor: "rgba(137,41,94,0.07)" }}
+        >
           <div>
             <p className="text-xl font-bold">Ready to replace your spreadsheet?</p>
-            <p className="text-white/40 text-sm mt-1">Free to use. No credit card.</p>
+            <p className="text-white/40 text-sm mt-1">Free to use. No credit card needed.</p>
           </div>
           <Link
             href="/signup"
-            className="inline-flex items-center gap-2 bg-white text-black text-sm font-bold px-6 py-3 rounded-xl hover:bg-white/90 transition-colors shrink-0"
+            className="inline-flex items-center gap-2 text-white text-sm font-bold px-6 py-3 rounded-xl hover:opacity-90 transition-opacity shrink-0"
+            style={{ backgroundColor: "#89295E" }}
           >
             Create your first project <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </section>
 
-      <footer className="border-t border-white/8 py-6 text-center text-xs text-white/20">
-        © 2026 BugDeck. Built for dev and QA teams.
+      {/* Footer */}
+      <footer className="border-t border-white/8 py-7 max-w-6xl mx-auto px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div
+            className="h-6 w-6 rounded flex items-center justify-center"
+            style={{ backgroundColor: "#89295E" }}
+          >
+            <span className="text-white text-[10px] font-black">A</span>
+          </div>
+          <span className="text-sm font-black text-white">Artcode</span>
+          <span className="text-white/20 text-sm">·</span>
+          <span className="text-sm font-black" style={{ color: "#89295E" }}>BugDeck</span>
+        </div>
+        <p className="text-xs text-white/25">© 2026 Artcode Pvt. Ltd. All rights reserved.</p>
       </footer>
+
     </div>
   );
 }
@@ -164,7 +192,7 @@ function BugCard({ title, module, priority, active, done }: {
 }) {
   const priorityColor = { low: "text-white/30", medium: "text-amber-400/70", high: "text-red-400/80" }[priority];
   return (
-    <div className={`rounded-lg border p-2 space-y-1.5 ${active ? "border-blue-400/30 bg-blue-400/5" : done ? "border-white/5 bg-white/2 opacity-50" : "border-white/8 bg-white/4"}`}>
+    <div className={`rounded-lg border p-2 space-y-1.5 ${active ? "border-blue-400/30 bg-blue-400/5" : done ? "border-white/5 bg-white/2 opacity-40" : "border-white/8 bg-white/4"}`}>
       <p className={`text-[10px] font-medium leading-snug ${done ? "line-through text-white/30" : "text-white/80"}`}>{title}</p>
       <div className="flex items-center justify-between">
         <span className="text-[9px] text-white/25 bg-white/8 px-1.5 py-0.5 rounded">{module}</span>
@@ -174,7 +202,7 @@ function BugCard({ title, module, priority, active, done }: {
   );
 }
 
-function Step({ n, title, desc, border }: { n: string; title: string; desc: string; border?: boolean; }) {
+function Step({ n, title, desc, border }: { n: string; title: string; desc: string; border?: boolean }) {
   return (
     <div className={`p-8 space-y-3 ${border ? "border-r border-white/8" : ""}`}>
       <span className="text-xs font-mono text-white/20">{n}</span>
@@ -184,10 +212,10 @@ function Step({ n, title, desc, border }: { n: string; title: string; desc: stri
   );
 }
 
-function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string; }) {
+function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
     <div className="rounded-xl border border-white/8 bg-white/3 p-6 space-y-3 hover:border-white/15 transition-colors">
-      <div className="text-white/40">{icon}</div>
+      <div style={{ color: "#89295E" }}>{icon}</div>
       <p className="font-bold text-sm">{title}</p>
       <p className="text-xs text-white/40 leading-relaxed">{desc}</p>
     </div>

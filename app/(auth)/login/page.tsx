@@ -115,20 +115,7 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <div className="relative border-b border-border my-2">
-        <span className="absolute left-1/2 -translate-x-1/2 -top-2 bg-card px-2 text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
-          Or Continue With
-        </span>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <Button variant="outline" size="sm" type="button" className="text-xs gap-1.5 font-bold h-9">
-          <GitBranch className="h-4 w-4" /> Github
-        </Button>
-        <Button variant="outline" size="sm" type="button" className="text-xs gap-1.5 font-bold h-9">
-          Google
-        </Button>
-      </div>
+    
 
       <p className="text-center text-xs text-muted-foreground font-medium">
         Don't have an account?{" "}

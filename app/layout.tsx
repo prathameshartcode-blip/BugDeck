@@ -18,8 +18,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "QA Copilot — AI-Powered Testing Platform",
-  description: "Automatically generate testing checklists, functional test suites, validation tests, security scenarios, and edge cases from requirements documents.",
+  title: "Artcode BugDeck — Bug Tracking for Dev & QA Teams",
+  description: "Organize bugs by project and module, track them across a kanban board, and export clean CSV reports. Built for small dev and QA teams.",
 };
 
 export default function RootLayout({

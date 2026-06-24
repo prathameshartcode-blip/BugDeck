@@ -93,7 +93,7 @@ export default function DashboardPage() {
       {/* Welcome Greeting Banner */}
       <div className="flex flex-col gap-1.5 text-left border-b border-border/40 pb-4">
         <h1 className="text-2xl font-black tracking-tight text-foreground">
-          Good morning, {user?.full_name || "QA Engineer"}!
+          Hello , {user?.full_name || "QA Engineer"}!
         </h1>
         <p className="text-xs text-muted-foreground font-semibold">{currentDate}</p>
       </div>
