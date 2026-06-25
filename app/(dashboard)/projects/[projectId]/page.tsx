@@ -2,20 +2,29 @@
 
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useProjectStore } from "@/store/project-store";
 
 /**
- * This page used to host a legacy board view.
- * The board has moved to /projects/[projectId]/board
- * Redirect immediately so old links still work.
+ * Redirects legacy /projects/[id] links to the board and syncs selected project.
  */
 export default function ProjectRedirectPage() {
   const params = useParams();
   const router = useRouter();
   const projectId = params.projectId as string;
+  const { projects, selectProject } = useProjectStore();
 
   useEffect(() => {
+    if (projects.length === 0) return;
+
+    const exists = projects.some((p) => p.id === projectId);
+    if (!exists) {
+      router.replace("/projects");
+      return;
+    }
+
+    selectProject(projectId);
     router.replace(`/projects/${projectId}/board`);
-  }, [projectId, router]);
+  }, [projectId, projects, router, selectProject]);
 
   return (
     <div className="flex h-60 items-center justify-center">

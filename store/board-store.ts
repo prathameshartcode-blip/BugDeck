@@ -27,6 +27,7 @@ interface BoardState {
     description: string,
     projectId: string
   ) => Promise<Module | undefined>;
+  deleteModule: (moduleId: string, projectId: string) => Promise<void>;
   _syncProjectStats: (projectId: string) => void;
 }
 
@@ -293,6 +294,30 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
       return newModule;
     } catch (err: any) {
       set({ error: err.message || 'Failed to add module' });
+      console.error(err);
+    }
+  },
+
+  deleteModule: async (moduleId, projectId) => {
+    try {
+      const { error } = await supabase
+        .from('modules')
+        .delete()
+        .eq('id', moduleId);
+
+      if (error) throw error;
+
+      set((state) => ({ modules: state.modules.filter((m) => m.id !== moduleId) }));
+
+      const projectStore = useProjectStore.getState();
+      const project = projectStore.projects.find((p) => p.id === projectId);
+      if (project) {
+        projectStore.updateProjectStats(projectId, {
+          module_count: Math.max(0, project.module_count - 1),
+        });
+      }
+    } catch (err: any) {
+      set({ error: err.message || 'Failed to delete module' });
       console.error(err);
     }
   },

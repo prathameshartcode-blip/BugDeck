@@ -38,34 +38,47 @@ export async function GET(req: NextRequest) {
 
   // All columns — matches exactly what the import expects
   const headers = [
-    'Bug ID',
-    'Title',
+   
     'Module',
+      'Created At',
+        'Description',
+          'Steps',
+            'Expected Result',
     'Status',
+      'Screenshot URL',
     'Priority',
-    'Description',
-    'Steps',
-    'Expected Result',
+  
+  
+  
     'Actual Result',
     'Notes',
-    'Screenshot URL',
-    'Created At',
+  
+     'Bug ID',
+    'Title',
+  
   ];
 
   const rows = (testCases || []).map((tc: any) => [
-    escapeCsv(tc.id),
-    escapeCsv(tc.title || ''),
+  
     escapeCsv(tc.modules?.name || ''),
-    // Export status as lowercase so re-importing always matches STATUS_MAP correctly
+      escapeCsv(tc.created_at || ''),
+       escapeCsv(tc.description || ''),
+        escapeCsv((tc.steps || []).map((s: any, i: number) => `${s.order || i + 1}. ${s.action}`).join(' | ')),
+     escapeCsv(tc.expected_result || ''),
+   
+        // Export status as lowercase so re-importing always matches STATUS_MAP correctly
     escapeCsv((tc.column_id || 'open').toLowerCase()),
+      escapeCsv(tc.screenshot_url || ''),
     escapeCsv(tc.priority || 'medium'),
-    escapeCsv(tc.description || ''),
-    escapeCsv((tc.steps || []).map((s: any, i: number) => `${s.order || i + 1}. ${s.action}`).join(' | ')),
-    escapeCsv(tc.expected_result || ''),
+   
+   
+  
     escapeCsv(tc.actual_result || ''),
     escapeCsv(tc.notes || ''),
-    escapeCsv(tc.screenshot_url || ''),
-    escapeCsv(tc.created_at || ''),
+  
+      escapeCsv(tc.id),
+    escapeCsv(tc.title || ''),
+  
   ]);
 
   const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');

@@ -111,11 +111,14 @@ export const useProjectStore = create<ProjectState>()(
           }));
 
           const cleanProjects = projectsWithStats.filter(Boolean) as ProjectWithStats[];
-          set({ projects: cleanProjects, loading: false });
 
-          if (cleanProjects.length && !get().selectedProject) {
-            set({ selectedProject: cleanProjects[0] });
-          }
+          const currentSelected = get().selectedProject;
+          const validSelected =
+            currentSelected && cleanProjects.some((p) => p.id === currentSelected.id)
+              ? cleanProjects.find((p) => p.id === currentSelected.id)!
+              : cleanProjects[0] ?? null;
+
+          set({ projects: cleanProjects, selectedProject: validSelected, loading: false });
         } catch (err: any) {
           set({ error: err.message || 'Failed to fetch projects', loading: false });
         }
@@ -237,11 +240,16 @@ export const useProjectStore = create<ProjectState>()(
 
           if (error) throw error;
 
-          set((state) => ({
-            projects: state.projects.filter((p) => p.id !== id),
-            selectedProject: state.selectedProject?.id === id ? null : state.selectedProject,
-            loading: false,
-          }));
+          set((state) => {
+            const remaining = state.projects.filter((p) => p.id !== id);
+            const nextSelected =
+              state.selectedProject?.id === id ? remaining[0] ?? null : state.selectedProject;
+            return {
+              projects: remaining,
+              selectedProject: nextSelected,
+              loading: false,
+            };
+          });
         } catch (err: any) {
           set({ error: err.message || 'Failed to delete project', loading: false });
         }

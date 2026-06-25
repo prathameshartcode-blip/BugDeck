@@ -2,12 +2,12 @@
 
 import React from "react";
 import { useParams, useRouter } from "next/navigation";
-import { BoardView } from "@/components/board/board-view";
+import { RunTestView } from "@/components/runtest/runtest-view";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function BoardPage() {
+export default function RunTestPage() {
   const params = useParams();
   const router = useRouter();
   const projectId = params.projectId as string;
@@ -25,7 +25,6 @@ export default function BoardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header bar */}
       <div className="flex items-center justify-between border-b border-border/40 pb-4 select-none">
         <div className="flex items-center gap-3">
           <Button
@@ -38,16 +37,16 @@ export default function BoardPage() {
           </Button>
           <div className="space-y-0.5 text-left">
             <h1 className="text-xl font-bold tracking-tight text-foreground">
-              Testing Board — {currentProject?.name || "Project"}
+              RunTest — {currentProject?.name || "Project"}
             </h1>
             <p className="text-[10px] text-muted-foreground font-semibold">
-              Drag test cards to advance statuses or log actual responses.
+              Plan and execute test cases. Drag cards to update execution status.
             </p>
           </div>
         </div>
       </div>
 
-      <BoardView projectId={projectId} />
+      <RunTestView projectId={projectId} />
     </div>
   );
 }

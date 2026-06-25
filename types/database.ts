@@ -84,6 +84,35 @@ export type TestCase = {
   updated_at: string;
 };
 export type TestCaseType = "functional" | "performance" | "security" | "usability";
+
+/** Kanban board status for a RunTest execution case. */
+export type RunTestStatus =
+  | "open"
+  | "in_progress"
+  | "passed"
+  | "failed"
+  | "blocked"
+  | "to_discuss";
+
+/** A QA test case tracked in the RunTest module (test_cases table). */
+export type RunTestCase = {
+  id: string;
+  module_id: string;
+  project_id: string;
+  title: string;
+  description: string | null;
+  priority: TestCasePriority;
+  status: RunTestStatus;
+  steps: TestStep[];
+  expected_result: string;
+  actual_result: string | null;
+  failed_reason: string | null;
+  screenshot_url: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
 /** A testing checklist that groups individual checklist items. */
 export type Checklist = {
   id: string;

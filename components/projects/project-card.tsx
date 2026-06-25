@@ -2,11 +2,13 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, FolderGit2 } from "lucide-react";
 import { ProjectWithStats } from "@/types/database";
+import { useProjectStore } from "@/store/project-store";
 
 interface ProjectCardProps {
   project: ProjectWithStats;
@@ -14,9 +16,17 @@ interface ProjectCardProps {
 }
 
 export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onDelete }) => {
+  const router = useRouter();
+  const { selectProject } = useProjectStore();
+
+  const handleOpen = () => {
+    selectProject(project.id);
+    router.push(`/projects/${project.id}/board`);
+  };
+
   return (
     <div className="relative group">
-      <Link href={`/projects/${project.id}`} className="block">
+      <button type="button" onClick={handleOpen} className="block w-full text-left">
         <Card className="h-48 flex flex-col justify-between hover:shadow-md cursor-pointer hover:border-primary/50 transition-all duration-200">
           <CardHeader className="p-5 pb-0">
             <div className="flex items-start justify-between gap-4">
@@ -50,7 +60,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onDelete }) =
             </div>
           </CardContent>
         </Card>
-      </Link>
+      </button>
 
       {/* Hover Delete Button */}
       <button
