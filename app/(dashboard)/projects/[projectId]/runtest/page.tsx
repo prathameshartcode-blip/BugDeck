@@ -37,7 +37,7 @@ export default function RunTestPage() {
           </Button>
           <div className="space-y-0.5 text-left">
             <h1 className="text-xl font-bold tracking-tight text-foreground">
-              RunTest — {currentProject?.name || "Project"}
+            Test Cases — {currentProject?.name || "Project"}
             </h1>
             <p className="text-[10px] text-muted-foreground font-semibold">
               Plan and execute test cases. Drag cards to update execution status.

@@ -272,7 +272,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
             Modules
           </Button>
           <Button onClick={() => setIsCreateOpen(true)} size="sm" className="gap-2">
-            <Plus className="h-4 w-4" /> New Test Case
+            <Plus className="h-4 w-4" /> New Bug
           </Button>
         </div>
       </div>
@@ -533,7 +533,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent onClose={() => setIsCreateOpen(false)} className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>Create New Test Case</DialogTitle>
+            <DialogTitle>Create New Bug</DialogTitle>
             <DialogDescription>Add a test case manually to the board.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto px-1">
@@ -618,7 +618,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreateTestCase} disabled={!newTestCase.title || !newTestCase.module_id}>Create Test Case</Button>
+            <Button onClick={handleCreateTestCase} disabled={!newTestCase.title || !newTestCase.module_id}>Create Bug</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

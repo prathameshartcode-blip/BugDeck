@@ -1,4 +1,5 @@
 "use client";
+/** @jsxImportSource react */
 
 import React from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -38,7 +39,7 @@ export default function BoardPage() {
           </Button>
           <div className="space-y-0.5 text-left">
             <h1 className="text-xl font-bold tracking-tight text-foreground">
-              Testing Board — {currentProject?.name || "Project"}
+              Bug Sheet — {currentProject?.name || "Project"}
             </h1>
             <p className="text-[10px] text-muted-foreground font-semibold">
               Drag test cards to advance statuses or log actual responses.

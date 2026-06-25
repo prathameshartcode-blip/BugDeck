@@ -40,13 +40,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, requiresProject: false },
     { name: "Projects", href: "/projects", icon: FolderKanban, requiresProject: false },
     {
-      name: "Test Cases",
+      name: "Bug Sheet",
       href: activeProjectId ? `/projects/${activeProjectId}/board` : "/projects",
       icon: TestTube2,
       requiresProject: true,
     },
     {
-      name: "RunTest",
+      name: "Test Cases",
       href: activeProjectId ? `/projects/${activeProjectId}/runtest` : "/projects",
       icon: PlayCircle,
       requiresProject: true,
