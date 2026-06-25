@@ -4,21 +4,25 @@ import React, { useState } from "react";
 import { useProjectStore } from "@/store/project-store";
 import { ProjectCard } from "@/components/projects/project-card";
 import { CreateProjectDialog } from "@/components/projects/create-project-dialog";
+import { DeleteProjectDialog } from "@/components/projects/delete-project-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, FolderGit2 } from "lucide-react";
+import type { ProjectWithStats } from "@/types/database";
 
 export default function ProjectsPage() {
-  const { projects, deleteProject } = useProjectStore();
+  const { projects } = useProjectStore();
   const [createOpen, setCreateOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<ProjectWithStats | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const handleDeleteClick = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (confirm("Are you sure you want to delete this project? All associated requirements and test cases will be lost.")) {
-      await deleteProject(id);
-    }
+    const project = projects.find((p) => p.id === id) ?? null;
+    setProjectToDelete(project);
+    setDeleteOpen(true);
   };
 
   const filteredProjects = projects.filter((p) =>
@@ -78,7 +82,7 @@ export default function ProjectsPage() {
             <ProjectCard
               key={project.id}
               project={project}
-              onDelete={handleDelete}
+              onDelete={handleDeleteClick}
             />
           ))}
         </div>
@@ -86,6 +90,11 @@ export default function ProjectsPage() {
 
       {/* Modal Dialog */}
       <CreateProjectDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <DeleteProjectDialog
+        project={projectToDelete}
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+      />
     </div>
   );
 }
