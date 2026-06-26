@@ -6,9 +6,15 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recha
 
 interface TestStatusChartProps {
   data: Array<{ name: string; value: number; color: string }>;
+  title?: string;
+  description?: string;
 }
 
-export const TestStatusChart: React.FC<TestStatusChartProps> = ({ data }) => {
+export const TestStatusChart: React.FC<TestStatusChartProps> = ({
+  data,
+  title = "Test Status Distribution",
+  description = "Breakdown of current test run execution status.",
+}) => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -23,18 +29,17 @@ export const TestStatusChart: React.FC<TestStatusChartProps> = ({ data }) => {
     );
   }
 
-  // Filter out categories with 0 values to keep the pie clean
   const chartData = data.filter((item) => item.value > 0);
 
   return (
     <Card className="col-span-3">
       <CardHeader>
-        <CardTitle>Test Status Distribution</CardTitle>
-        <CardDescription>Breakdown of current test run execution status.</CardDescription>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="h-[280px] flex items-center justify-center">
         {chartData.length === 0 ? (
-          <span className="text-muted-foreground text-xs">No test cases generated yet.</span>
+          <span className="text-muted-foreground text-xs">No data yet.</span>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -57,7 +62,7 @@ export const TestStatusChart: React.FC<TestStatusChartProps> = ({ data }) => {
                     return (
                       <div className="rounded-lg border border-border bg-card p-2.5 shadow-md text-xs">
                         <span className="font-semibold" style={{ color: payload[0].payload.color }}>
-                          {payload[0].name}: {payload[0].value} tests
+                          {payload[0].name}: {payload[0].value}
                         </span>
                       </div>
                     );
@@ -70,7 +75,9 @@ export const TestStatusChart: React.FC<TestStatusChartProps> = ({ data }) => {
                 height={36}
                 iconType="circle"
                 iconSize={8}
-                formatter={(value) => <span className="text-xs text-muted-foreground">{value}</span>}
+                formatter={(value) => (
+                  <span className="text-xs text-muted-foreground">{value}</span>
+                )}
               />
             </PieChart>
           </ResponsiveContainer>

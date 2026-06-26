@@ -80,9 +80,9 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
           )}
         </div>
 
-        <div className="mt-2 text-[10px] text-muted-foreground">
+        {/* <div className="mt-2 text-[10px] text-muted-foreground">
           Compared to last week
-        </div>
+        </div> */}
       </CardContent>
     </Card>
   );
