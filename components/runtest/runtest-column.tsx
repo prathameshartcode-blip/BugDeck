@@ -11,6 +11,7 @@ interface RunTestColumnProps {
   color: string;
   testCases: RunTestCase[];
   onTestCaseClick: (testCase: RunTestCase) => void;
+  onDragStart: (e: React.DragEvent, id: string) => void;
   onDropTestCase: (id: string, status: RunTestStatus, overId?: string) => void;
   selectedCases?: string[];
   onSelectToggle?: (id: string) => void;
