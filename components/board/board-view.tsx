@@ -127,7 +127,10 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [bulkMoveStatus, setBulkMoveStatus] = useState<TestCaseStatus | "">("");
 
-  // Tracks live edits inside the detail dialog before savingrate from create dialog)
+  // Tracks live edits inside the detail dialog before saving
+  const [editingCase, setEditingCase] = useState<Partial<TestCase>>({});
+
+  // Module editing state for the detail dialog (separate from create dialog)
   const [editCreatingModule, setEditCreatingModule] = useState(false);
   const [editNewModuleName,  setEditNewModuleName]  = useState("");
 
