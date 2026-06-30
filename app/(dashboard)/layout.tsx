@@ -55,8 +55,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Header />
         
         {/* Scrollable Work View */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 scrollbar-thin">
-          <div className="max-w-6xl mx-auto animate-fade-in">
+        <main className="flex-1 overflow-auto p-4 md:p-6 scrollbar-thin">
+          <div className="w-full h-full animate-fade-in flex flex-col">
             {children}
           </div>
         </main>

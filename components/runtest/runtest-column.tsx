@@ -11,8 +11,10 @@ interface RunTestColumnProps {
   color: string;
   testCases: RunTestCase[];
   onTestCaseClick: (testCase: RunTestCase) => void;
-  onDragStart: (e: React.DragEvent, id: string) => void;
   onDropTestCase: (id: string, status: RunTestStatus, overId?: string) => void;
+  selectedCases?: string[];
+  onSelectToggle?: (id: string) => void;
+  isSelectionMode?: boolean;
 }
 
 export const RunTestColumn: React.FC<RunTestColumnProps> = ({
@@ -23,6 +25,9 @@ export const RunTestColumn: React.FC<RunTestColumnProps> = ({
   onTestCaseClick,
   onDragStart,
   onDropTestCase,
+  selectedCases = [],
+  onSelectToggle,
+  isSelectionMode,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -56,7 +61,7 @@ export const RunTestColumn: React.FC<RunTestColumnProps> = ({
       onDragLeave={handleDragLeave}
       onDrop={handleDropColumn}
       className={cn(
-        "flex flex-col w-72 shrink-0 rounded-xl bg-muted/40 border border-transparent p-3 min-h-[450px] transition-all duration-200",
+        "flex flex-col w-[340px] shrink-0 rounded-xl bg-muted/40 border border-transparent p-3 min-h-[450px] transition-all duration-200",
         isDragOver && "border-dashed border-primary/50 bg-primary/5"
       )}
     >
@@ -84,6 +89,9 @@ export const RunTestColumn: React.FC<RunTestColumnProps> = ({
               onDragStart={onDragStart}
               onDragOver={handleDragOver}
               onDrop={handleDropOnCard}
+              isSelected={selectedCases.includes(tc.id)}
+              onSelectToggle={onSelectToggle}
+              isSelectionMode={isSelectionMode}
             />
           ))
         )}

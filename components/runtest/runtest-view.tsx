@@ -111,6 +111,8 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
     reorderRunTestCase,
     updateRunTestCase,
     deleteRunTestCase,
+    deleteMultipleRunTestCases,
+    moveMultipleRunTestCases,
     createRunTestCase,
     addModule,
     deleteModule,
@@ -143,6 +145,11 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
   const [moduleFilter, setModuleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
+  const [selectedCases, setSelectedCases] = useState<string[]>([]);
+  const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [bulkMoveStatus, setBulkMoveStatus] = useState<RunTestStatus | "">("");
+
   const projectCases = testCases.filter((tc) => tc.project_id === projectId);
   const filteredCases = projectCases.filter((tc) => {
     const matchesPriority = priorityFilter === "all" || tc.priority === priorityFilter;
@@ -160,12 +167,38 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
     await reorderRunTestCase(id, newStatus, overId);
   };
 
-  const handleCaseClick = (tc: RunTestCase) => {
+  const handleTestCaseClick = (tc: RunTestCase) => {
+    if (isSelectionMode) {
+      handleSelectToggle(tc.id);
+      return;
+    }
     setSelectedCase(tc);
     setActiveTab("details");
     setEditCreatingModule(false);
     setEditNewModuleName("");
     setIsDetailOpen(true);
+  };
+
+  const handleSelectToggle = (id: string) => {
+    setSelectedCases((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedCases.length === 0) return;
+    await deleteMultipleRunTestCases(selectedCases);
+    setSelectedCases([]);
+    setIsBatchDeleteOpen(false);
+    setIsSelectionMode(false);
+  };
+
+  const handleBulkMove = async (status: RunTestStatus) => {
+    if (selectedCases.length === 0) return;
+    await moveMultipleRunTestCases(selectedCases, status);
+    setSelectedCases([]);
+    setIsSelectionMode(false);
+    setBulkMoveStatus("");
   };
 
   const handleFieldUpdate = async (field: keyof RunTestCase, value: string) => {
@@ -217,12 +250,13 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
     setNewSteps([]);
   };
 
-  const getExportUrl = () => {
+  const getExportUrl = (ids?: string[]) => {
     const params = new URLSearchParams();
     params.append("projectId", projectId);
     if (priorityFilter !== "all") params.append("priority", priorityFilter);
     if (moduleFilter !== "all") params.append("module", moduleFilter);
     if (statusFilter !== "all") params.append("status", statusFilter);
+    if (ids && ids.length > 0)    params.append("ids", ids.join(","));
     return `/api/runtest/export?${params.toString()}`;
   };
 
@@ -271,6 +305,56 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
           <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsModulesOpen(true)}>
             Modules
           </Button>
+
+          {!isSelectionMode ? (
+            <Button variant="outline" size="sm" onClick={() => setIsSelectionMode(true)}>
+              Select Multiple
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-md border border-border">
+              <span className="text-xs font-semibold px-2">{selectedCases.length} selected</span>
+              
+              <select 
+                value={bulkMoveStatus} 
+                onChange={(e) => {
+                  const val = e.target.value as RunTestStatus;
+                  if (val) handleBulkMove(val);
+                }}
+                disabled={selectedCases.length === 0}
+                className="h-8 rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="" disabled>Move to...</option>
+                {ALL_STATUSES.map(st => (
+                  <option key={st} value={st}>{statusLabel(st)}</option>
+                ))}
+              </select>
+
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2 h-8 px-3 ml-1" 
+                disabled={selectedCases.length === 0}
+                onClick={() => window.open(getExportUrl(selectedCases), "_blank")}
+              >
+                Export
+              </Button>
+
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                className="gap-2 h-8 px-3" 
+                disabled={selectedCases.length === 0}
+                onClick={() => setIsBatchDeleteOpen(true)}
+              >
+                <Trash className="h-4 w-4" /> Delete
+              </Button>
+              
+              <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => { setIsSelectionMode(false); setSelectedCases([]); }}>
+                Cancel
+              </Button>
+            </div>
+          )}
+
           <Button onClick={() => setIsCreateOpen(true)} size="sm" className="gap-2">
             <Plus className="h-4 w-4" /> New Test Case
           </Button>
@@ -285,9 +369,12 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
             title={col.title}
             color={col.color}
             testCases={filteredCases.filter((tc) => tc.status === col.id)}
-            onTestCaseClick={handleCaseClick}
+            onTestCaseClick={handleTestCaseClick}
             onDragStart={handleDragStart}
             onDropTestCase={handleDrop}
+            selectedCases={selectedCases}
+            onSelectToggle={handleSelectToggle}
+            isSelectionMode={isSelectionMode}
           />
         ))}
       </div>
@@ -653,6 +740,22 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
           </div>
           <DialogFooter>
             <Button size="sm" onClick={() => setIsModulesOpen(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Batch Delete Confirmation Dialog ── */}
+      <Dialog open={isBatchDeleteOpen} onOpenChange={setIsBatchDeleteOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete {selectedCases.length} Test Case{selectedCases.length !== 1 ? 's' : ''}?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedCases.length} selected item{selectedCases.length !== 1 ? 's' : ''}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" size="sm" onClick={() => setIsBatchDeleteOpen(false)}>Cancel</Button>
+            <Button variant="destructive" size="sm" onClick={handleBatchDelete}>Delete All</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

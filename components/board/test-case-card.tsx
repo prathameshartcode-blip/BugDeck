@@ -54,7 +54,7 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({ testCase, onClick, o
               )}
             </div>
             <div className="flex items-center gap-1.5 ml-auto">
-              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+              <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
                 {testCase.priority}
               </span>
               <span className={cn("h-2 w-2 rounded-full", priorityColorMap[testCase.priority])} />
@@ -62,23 +62,23 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({ testCase, onClick, o
           </div>
 
           {/* Title */}
-          <h4 className="text-xs font-semibold leading-snug text-foreground line-clamp-2">
+          <h4 className="text-sm font-semibold leading-snug text-foreground line-clamp-2">
             {testCase.title}
           </h4>
 
           {/* Description */}
           {testCase.description && (
-            <p className="text-[10px] text-muted-foreground line-clamp-2 leading-normal">
+            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
               {testCase.description}
             </p>
           )}
 
           {/* Footer */}
-          <div className="flex items-center justify-between text-[9px] text-muted-foreground pt-2 border-t border-border/50">
+          <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-3 border-t border-border/50">
             <span>{testCase.steps.length} steps</span>
-            <span className="font-semibold text-foreground bg-secondary/80 px-1.5 py-0.5 rounded truncate max-w-[100px]">
+            {/* <span className="font-semibold text-foreground bg-secondary/80 px-2 py-0.5 rounded truncate max-w-[120px]">
               ID: {testCase.id}
-            </span>
+            </span> */}
           </div>
         </CardContent>
       </Card>

@@ -21,6 +21,8 @@ interface RunTestState {
     overId?: string
   ) => Promise<void>;
   deleteRunTestCase: (id: string) => Promise<void>;
+  deleteMultipleRunTestCases: (ids: string[]) => Promise<void>;
+  moveMultipleRunTestCases: (ids: string[], newStatus: RunTestCase["status"]) => Promise<void>;
   addModule: (
     name: string,
     description: string,
@@ -185,6 +187,50 @@ export const useRunTestStore = create<RunTestState>()((set, get) => ({
       }));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to delete test case";
+      set({ error: message });
+      console.error(err);
+    }
+  },
+
+  deleteMultipleRunTestCases: async (ids) => {
+    try {
+      if (ids.length === 0) return;
+      
+      const { error } = await supabase
+        .from("test_cases")
+        .delete()
+        .in("id", ids);
+
+      if (error) throw error;
+
+      set((state) => ({
+        testCases: state.testCases.filter((c) => !ids.includes(c.id)),
+      }));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to delete multiple test cases";
+      set({ error: message });
+      console.error(err);
+    }
+  },
+
+  moveMultipleRunTestCases: async (ids, newStatus) => {
+    try {
+      if (ids.length === 0) return;
+
+      const { error } = await supabase
+        .from("test_cases")
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .in("id", ids);
+
+      if (error) throw error;
+
+      set((state) => ({
+        testCases: state.testCases.map((c) => 
+          ids.includes(c.id) ? { ...c, status: newStatus, updated_at: new Date().toISOString() } : c
+        ),
+      }));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to move multiple test cases";
       set({ error: message });
       console.error(err);
     }

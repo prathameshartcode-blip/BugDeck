@@ -66,7 +66,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
       onDragLeave={handleDragLeave}
       onDrop={handleDropColumn}
       className={cn(
-        "flex flex-col w-72 shrink-0 rounded-xl bg-muted/40 border border-transparent p-3 min-h-[450px] transition-all duration-200",
+        "flex flex-col w-[340px] shrink-0 rounded-xl bg-muted/40 border border-transparent p-3 min-h-[450px] transition-all duration-200",
         isDragOver && "border-dashed border-primary/50 bg-primary/5"
       )}
     >
