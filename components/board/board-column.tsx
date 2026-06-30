@@ -13,6 +13,9 @@ interface BoardColumnProps {
   onTestCaseClick: (testCase: TestCase) => void;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onDropTestCase: (id: string, status: TestCaseStatus, overId?: string) => void;
+  selectedCases?: string[];
+  onSelectToggle?: (id: string) => void;
+  isSelectionMode?: boolean;
 }
 
 export const BoardColumn: React.FC<BoardColumnProps> = ({
@@ -23,6 +26,9 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
   onTestCaseClick,
   onDragStart,
   onDropTestCase,
+  selectedCases = [],
+  onSelectToggle,
+  isSelectionMode,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -90,6 +96,9 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
               onDragStart={onDragStart}
               onDragOver={handleDragOver}
               onDrop={handleDropOnCard}
+              isSelected={selectedCases.includes(tc.id)}
+              onSelectToggle={onSelectToggle}
+              isSelectionMode={isSelectionMode}
             />
           ))
         )}

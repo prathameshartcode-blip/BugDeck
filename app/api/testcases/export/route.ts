@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
   const priorityFilter = req.nextUrl.searchParams.get('priority') || 'all';
   const moduleFilter   = req.nextUrl.searchParams.get('module')   || 'all';
   const statusFilter   = req.nextUrl.searchParams.get('status')   || 'all';
+  const idsParam       = req.nextUrl.searchParams.get('ids');
 
   let query = supabase
     .from('cards')
@@ -29,6 +30,12 @@ export async function GET(req: NextRequest) {
   if (priorityFilter !== 'all') query = query.eq('priority', priorityFilter);
   if (moduleFilter   !== 'all') query = query.eq('module_id', moduleFilter);
   if (statusFilter   !== 'all') query = query.eq('column_id', statusFilter);
+  if (idsParam) {
+    const idsArray = idsParam.split(',').map(id => id.trim()).filter(Boolean);
+    if (idsArray.length > 0) {
+      query = query.in('id', idsArray);
+    }
+  }
 
   const { data: testCases, error } = await query;
 

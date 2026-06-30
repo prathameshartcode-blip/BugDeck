@@ -22,6 +22,8 @@ interface BoardState {
     overId?: string
   ) => Promise<void>;
   deleteTestCase: (id: string) => Promise<void>;
+  deleteMultipleTestCases: (ids: string[]) => Promise<void>;
+  moveMultipleTestCases: (ids: string[], newStatus: TestCase["status"]) => Promise<void>;
   addModule: (
     name: string,
     description: string,
@@ -263,6 +265,62 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
       }
     } catch (err: any) {
       set({ error: err.message || 'Failed to delete test case' });
+      console.error(err);
+    }
+  },
+
+  deleteMultipleTestCases: async (ids) => {
+    try {
+      if (ids.length === 0) return;
+      
+      const tc = get().testCases.find((c) => ids.includes(c.id));
+      const projectId = tc?.project_id;
+
+      const { error } = await supabase
+        .from('cards')
+        .delete()
+        .in('id', ids);
+
+      if (error) throw error;
+
+      set((state) => ({
+        testCases: state.testCases.filter((c) => !ids.includes(c.id)),
+      }));
+
+      if (projectId) {
+        get()._syncProjectStats(projectId);
+      }
+    } catch (err: any) {
+      set({ error: err.message || 'Failed to delete multiple test cases' });
+      console.error(err);
+    }
+  },
+
+  moveMultipleTestCases: async (ids, newStatus) => {
+    try {
+      if (ids.length === 0) return;
+      
+      const tc = get().testCases.find((c) => ids.includes(c.id));
+      const projectId = tc?.project_id;
+
+      const { error } = await supabase
+        .from('cards')
+        .update({ column_id: newStatus, updated_at: new Date().toISOString() })
+        .in('id', ids);
+
+      if (error) throw error;
+
+      set((state) => ({
+        testCases: state.testCases.map((c) => 
+          ids.includes(c.id) ? { ...c, status: newStatus, updated_at: new Date().toISOString() } : c
+        ),
+      }));
+
+      if (projectId) {
+        get()._syncProjectStats(projectId);
+      }
+    } catch (err: any) {
+      set({ error: err.message || 'Failed to move multiple test cases' });
       console.error(err);
     }
   },

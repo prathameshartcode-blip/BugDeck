@@ -13,6 +13,9 @@ interface TestCaseCardProps {
   onDragStart: (e: React.DragEvent, id: string) => void;
   onDragOver?: (e: React.DragEvent) => void;
   onDrop?: (e: React.DragEvent, overId: string) => void;
+  isSelected?: boolean;
+  onSelectToggle?: (id: string) => void;
+  isSelectionMode?: boolean;
 }
 
 const priorityColorMap: Record<TestCasePriority, string> = {
@@ -22,7 +25,7 @@ const priorityColorMap: Record<TestCasePriority, string> = {
   low: "bg-blue-500",
 };
 
-export const TestCaseCard: React.FC<TestCaseCardProps> = ({ testCase, onClick, onDragStart, onDragOver, onDrop }) => {
+export const TestCaseCard: React.FC<TestCaseCardProps> = ({ testCase, onClick, onDragStart, onDragOver, onDrop, isSelected, onSelectToggle, isSelectionMode }) => {
   return (
     <div
       draggable
@@ -36,6 +39,20 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({ testCase, onClick, o
         <CardContent className="p-4 space-y-3">
           {/* Header */}
           <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2">
+              {isSelectionMode && onSelectToggle && (
+                <input 
+                  type="checkbox"
+                  checked={!!isSelected}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    onSelectToggle(testCase.id);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                />
+              )}
+            </div>
             <div className="flex items-center gap-1.5 ml-auto">
               <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
                 {testCase.priority}

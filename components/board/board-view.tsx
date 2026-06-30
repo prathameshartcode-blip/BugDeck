@@ -103,7 +103,7 @@ function InlineEdit({
 }
 
 export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
-  const { testCases, reorderTestCase, updateTestCase, deleteTestCase, createTestCase, addModule, deleteModule, modules, fetchBoardData } = useBoardStore();
+  const { testCases, reorderTestCase, updateTestCase, deleteTestCase, deleteMultipleTestCases, moveMultipleTestCases, createTestCase, addModule, deleteModule, modules, fetchBoardData } = useBoardStore();
 
   useEffect(() => {
     if (projectId) fetchBoardData(projectId);
@@ -122,7 +122,12 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const [stepExpected,   setStepExpected]   = useState("");
   const [activeTab,      setActiveTab]      = useState<"details" | "steps" | "notes">("details");
 
-  // Module editing state for the detail dialog (separate from create dialog)
+  const [selectedCases, setSelectedCases] = useState<string[]>([]);
+  const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [bulkMoveStatus, setBulkMoveStatus] = useState<TestCaseStatus | "">("");
+
+  // Tracks live edits inside the detail dialog before savingrate from create dialog)
   const [editCreatingModule, setEditCreatingModule] = useState(false);
   const [editNewModuleName,  setEditNewModuleName]  = useState("");
 
@@ -153,7 +158,12 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   };
 
   const handleTestCaseClick = (tc: TestCase) => {
+    if (isSelectionMode) {
+      handleSelectToggle(tc.id);
+      return;
+    }
     setSelectedTestCase(tc);
+    setEditingCase({ ...tc });   // seed edit state with current values
     setActiveTab("details");
     setEditCreatingModule(false);
     setEditNewModuleName("");
@@ -180,6 +190,28 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
       setIsDetailOpen(false);
       setSelectedTestCase(null);
     }
+  };
+
+  const handleSelectToggle = (id: string) => {
+    setSelectedCases((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedCases.length === 0) return;
+    await deleteMultipleTestCases(selectedCases);
+    setSelectedCases([]);
+    setIsBatchDeleteOpen(false);
+    setIsSelectionMode(false);
+  };
+
+  const handleBulkMove = async (status: TestCaseStatus) => {
+    if (selectedCases.length === 0) return;
+    await moveMultipleTestCases(selectedCases, status);
+    setSelectedCases([]);
+    setIsSelectionMode(false);
+    setBulkMoveStatus("");
   };
 
   const handleAddStep = () => {
@@ -211,12 +243,13 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
     setNewSteps([]);
   };
 
-  const getExportUrl = () => {
+  const getExportUrl = (ids?: string[]) => {
     const params = new URLSearchParams();
     params.append("projectId", projectId);
     if (priorityFilter !== "all") params.append("priority", priorityFilter);
     if (moduleFilter   !== "all") params.append("module",   moduleFilter);
     if (statusFilter   !== "all") params.append("status",   statusFilter);
+    if (ids && ids.length > 0)    params.append("ids",      ids.join(","));
     return `/api/testcases/export?${params.toString()}`;
   };
 
@@ -262,7 +295,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
 
         <div className="flex items-center gap-4">
           <div className="text-xs text-muted-foreground font-medium">
-            Showing <span className="text-foreground font-bold">{filteredCases.length}</span> of {projectCases.length} test cases
+            Showing <span className="text-foreground font-bold">{filteredCases.length}</span> of {projectCases.length} bugs
           </div>
           <ImportButton projectId={projectId} onImported={() => fetchBoardData(projectId)} />
           <Button variant="outline" size="sm" className="gap-2" onClick={() => window.open(getExportUrl(), "_blank")}>
@@ -271,6 +304,59 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
           <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsModulesOpen(true)}>
             Modules
           </Button>
+
+          {/* Bulk Actions Area */}
+          {!isSelectionMode ? (
+            <Button variant="outline" size="sm" onClick={() => setIsSelectionMode(true)}>
+              Select Multiple
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-md border border-border">
+              <span className="text-xs font-semibold px-2">{selectedCases.length} selected</span>
+              
+              <select 
+                value={bulkMoveStatus} 
+                onChange={(e) => {
+                  const val = e.target.value as TestCaseStatus;
+                  if (val) handleBulkMove(val);
+                }}
+                disabled={selectedCases.length === 0}
+                className="h-8 rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="" disabled>Move to...</option>
+                <option value="open">Open</option>
+                <option value="Fixed">Fixed</option>
+                <option value="closed">Closed</option>
+                <option value="reopen">Reopen</option>
+                <option value="todiscuss">To Discuss</option>
+              </select>
+
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2 h-8 px-3 ml-1" 
+                disabled={selectedCases.length === 0}
+                onClick={() => window.open(getExportUrl(selectedCases), "_blank")}
+              >
+                Export
+              </Button>
+
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                className="gap-2 h-8 px-3" 
+                disabled={selectedCases.length === 0}
+                onClick={() => setIsBatchDeleteOpen(true)}
+              >
+                <Trash className="h-4 w-4" /> Delete
+              </Button>
+              
+              <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => { setIsSelectionMode(false); setSelectedCases([]); }}>
+                Cancel
+              </Button>
+            </div>
+          )}
+
           <Button onClick={() => setIsCreateOpen(true)} size="sm" className="gap-2">
             <Plus className="h-4 w-4" /> New Bug
           </Button>
@@ -289,6 +375,9 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
             onTestCaseClick={handleTestCaseClick}
             onDragStart={handleDragStart}
             onDropTestCase={handleDropTestCase}
+            selectedCases={selectedCases}
+            onSelectToggle={handleSelectToggle}
+            isSelectionMode={isSelectionMode}
           />
         ))}
       </div>
@@ -690,6 +779,22 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
 
           <DialogFooter>
             <Button size="sm" onClick={() => setIsModulesOpen(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Batch Delete Confirmation Dialog ── */}
+      <Dialog open={isBatchDeleteOpen} onOpenChange={setIsBatchDeleteOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete {selectedCases.length} Bug{selectedCases.length !== 1 ? 's' : ''}?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedCases.length} selected item{selectedCases.length !== 1 ? 's' : ''}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" size="sm" onClick={() => setIsBatchDeleteOpen(false)}>Cancel</Button>
+            <Button variant="destructive" size="sm" onClick={handleBatchDelete}>Delete All</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
