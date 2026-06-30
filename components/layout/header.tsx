@@ -34,20 +34,22 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6 shrink-0 z-30 select-none">
+    <header className="flex h-16 items-center justify-between border-b border-border/50 bg-card/80 backdrop-blur-md px-6 shrink-0 z-30 select-none sticky top-0 shadow-sm">
       <div className="flex items-center gap-3 min-w-0">
         <DropdownMenu>
           <DropdownMenuTrigger onClick={() => setProjectOpen(!projectOpen)}>
-            <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-accent transition-colors max-w-[280px]">
-              <Folder className="h-4 w-4 text-primary shrink-0" />
+            <div className="flex items-center gap-2.5 rounded-lg border border-border/60 bg-background/50 hover:bg-accent/50 px-3 py-1.5 text-sm font-semibold text-foreground transition-all max-w-[280px] shadow-sm ring-1 ring-transparent focus-within:ring-primary/20">
+              <div className="p-1 rounded bg-primary/10 text-primary shrink-0">
+                <Folder className="h-4 w-4" />
+              </div>
               <span className="truncate">
                 {activeProject?.name || (projects.length ? "Select Project" : "No Projects")}
               </span>
-              <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
+              <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-1" />
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent open={projectOpen} onClose={() => setProjectOpen(false)} align="left" className="w-64">
-            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+          <DropdownMenuContent open={projectOpen} onClose={() => setProjectOpen(false)} align="left" className="w-64 rounded-xl shadow-lg border-border/50 bg-card/95 backdrop-blur-xl">
+            <div className="px-3 py-2.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
               Switch Project
             </div>
             {projects.length === 0 && (
@@ -57,24 +59,24 @@ export const Header: React.FC = () => {
               <DropdownMenuItem
                 key={proj.id}
                 onClick={() => handleSelectProject(proj.id)}
-                className="flex flex-col items-start gap-0.5 py-2"
+                className="flex flex-col items-start gap-1 py-2.5 px-3 mx-1 my-0.5 rounded-md focus:bg-primary/5"
               >
-                <span className={`font-medium ${proj.id === activeProjectId ? "text-primary" : ""}`}>
+                <span className={`font-semibold ${proj.id === activeProjectId ? "text-primary" : "text-foreground"}`}>
                   {proj.name}
                   {proj.id === activeProjectId ? " ✓" : ""}
                 </span>
-                <span className="text-[10px] text-muted-foreground line-clamp-1">
+                <span className="text-[10px] text-muted-foreground line-clamp-1 leading-snug">
                   {proj.description || "No description"}
                 </span>
               </DropdownMenuItem>
             ))}
-            <div className="border-t border-border mt-1 pt-1">
+            <div className="border-t border-border/50 mt-1 pt-1">
               <DropdownMenuItem
                 onClick={() => {
                   setCreateOpen(true);
                   setProjectOpen(false);
                 }}
-                className="flex items-center gap-2 text-primary font-medium"
+                className="flex items-center gap-2 text-primary font-semibold py-2.5 px-3 mx-1 mb-1 rounded-md focus:bg-primary/10"
               >
                 <Plus className="h-4 w-4" />
                 <span>Create New Project</span>

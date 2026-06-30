@@ -48,11 +48,17 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
   }, [value]);
 
   return (
-    <Card className="overflow-hidden hover:scale-[1.01] transition-transform duration-200">
-      <CardContent className="p-6">
+    <Card className={cn(
+      "relative overflow-hidden hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 border-border/50 bg-gradient-to-b from-card to-card/50",
+      trend === "up" && "border-t-4 border-t-emerald-500/80",
+      trend === "down" && "border-t-4 border-t-destructive/80",
+      trend === "neutral" && "border-t-4 border-t-primary/50"
+    )}>
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+      <CardContent className="p-5">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-muted-foreground">{title}</span>
-          <div className="p-2 rounded-lg bg-primary/10 text-primary">
+          <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{title}</span>
+          <div className="p-2.5 rounded-xl bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20">
             <Icon className="h-4 w-4" />
           </div>
         </div>

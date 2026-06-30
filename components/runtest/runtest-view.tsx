@@ -262,7 +262,7 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl border border-border bg-card select-none">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl border border-border/50 bg-card/60 backdrop-blur-md shadow-sm select-none">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex flex-col gap-1">
             <span className="text-[10px] font-bold text-muted-foreground uppercase">Module</span>

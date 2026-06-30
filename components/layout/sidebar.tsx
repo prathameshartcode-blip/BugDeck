@@ -55,22 +55,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
 
   return (
     <div
-      className="flex flex-col h-screen border-r border-border bg-sidebar text-sidebar-foreground select-none relative transition-[width] duration-300"
+      className="flex flex-col h-screen border-r border-sidebar-border bg-sidebar text-sidebar-foreground select-none relative transition-[width] duration-300 shadow-[1px_0_10px_rgba(0,0,0,0.02)] dark:shadow-[1px_0_10px_rgba(0,0,0,0.2)]"
       style={{ width: collapsed ? 64 : 260 }}
     >
-      <div className="flex items-center p-4 border-b border-sidebar-border h-16 shrink-0 overflow-hidden">
+      <div className="flex items-center p-4 border-b border-sidebar-border/50 h-16 shrink-0 overflow-hidden">
         <Link href="/dashboard" className="flex items-center gap-2.5">
           <div
-            className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
-            style={{ backgroundColor: "#89295E" }}
+            className="h-8 w-8 rounded-xl flex items-center justify-center shrink-0 bg-gradient-to-br from-primary to-primary/80 shadow-inner"
           >
-            <span className="text-white text-sm font-black">A</span>
+            <span className="text-white text-sm font-black tracking-tight">A</span>
           </div>
           {!collapsed && (
             <div className="flex items-baseline gap-1.5 overflow-hidden">
-              <span className="font-black text-sm tracking-tight whitespace-nowrap">Artcode</span>
-              <span className="text-foreground/20 text-sm">·</span>
-              <span className="font-black text-sm tracking-tight whitespace-nowrap" style={{ color: "#89295E" }}>
+              <span className="font-bold text-sm tracking-tight whitespace-nowrap text-foreground">Artcode</span>
+              <span className="text-foreground/30 text-sm">·</span>
+              <span className="font-bold text-sm tracking-tight whitespace-nowrap text-primary">
                 BugDeck
               </span>
             </div>
@@ -95,16 +94,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
               href={item.href}
               aria-disabled={disabled}
               className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all group relative",
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group relative border border-transparent",
                 isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground",
+                  ? "bg-sidebar-accent/60 text-sidebar-accent-foreground shadow-sm border-l-primary/60 border-l-4 rounded-l-md"
+                  : "text-muted-foreground hover:bg-sidebar-accent/30 hover:text-foreground",
                 disabled && "opacity-50 pointer-events-none"
               )}
             >
               <item.icon
-                className="h-4 w-4 shrink-0 transition-colors"
-                style={isActive ? { color: "#89295E" } : {}}
+                className={cn("h-4 w-4 shrink-0 transition-all", isActive ? "text-primary scale-110" : "group-hover:scale-110")}
               />
               {!collapsed && <span className="whitespace-nowrap">{item.name}</span>}
               {collapsed && (
@@ -124,16 +122,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
         {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
       </button>
 
-      <div className="p-3 border-t border-sidebar-border shrink-0 bg-sidebar-accent/30">
-        <div className="flex items-center justify-between gap-3 overflow-hidden">
+      <div className="p-3 border-t border-sidebar-border/50 shrink-0 bg-sidebar/50 backdrop-blur-sm">
+        <div className="flex items-center justify-between gap-3 overflow-hidden rounded-xl bg-sidebar-accent/30 p-2 border border-sidebar-border/30 hover:bg-sidebar-accent/50 transition-colors">
           <div className="flex items-center gap-2.5 min-w-0">
-            <Avatar fallback={user?.full_name?.charAt(0) || "U"} src={user?.avatar_url} className="h-8 w-8" />
+            <Avatar fallback={user?.full_name?.charAt(0) || "U"} src={user?.avatar_url} className="h-8 w-8 ring-2 ring-background shadow-sm" />
             {!collapsed && (
               <div className="flex flex-col text-left min-w-0">
-                <span className="text-xs font-semibold text-foreground truncate max-w-[130px]">
+                <span className="text-xs font-semibold text-foreground truncate max-w-[120px]">
                   {user?.full_name || "QA Engineer"}
                 </span>
-                <span className="text-[10px] text-muted-foreground truncate max-w-[130px]">
+                <span className="text-[10px] text-muted-foreground truncate max-w-[120px] font-medium">
                   {user?.email || "developer@example.com"}
                 </span>
               </div>
@@ -144,7 +142,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
               variant="ghost"
               size="icon"
               onClick={handleLogout}
-              className="text-muted-foreground hover:text-destructive shrink-0 h-8 w-8"
+              className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive shrink-0 h-8 w-8 rounded-lg transition-colors"
               title="Logout"
             >
               <LogOut className="h-4 w-4" />

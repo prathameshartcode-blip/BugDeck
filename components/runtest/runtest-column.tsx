@@ -62,8 +62,8 @@ export const RunTestColumn: React.FC<RunTestColumnProps> = ({
       onDragLeave={handleDragLeave}
       onDrop={handleDropColumn}
       className={cn(
-        "flex flex-col w-[340px] shrink-0 rounded-xl bg-muted/40 border border-transparent p-3 min-h-[450px] transition-all duration-200",
-        isDragOver && "border-dashed border-primary/50 bg-primary/5"
+        "flex flex-col w-[340px] shrink-0 rounded-2xl bg-muted/30 border border-border/40 p-3.5 min-h-[450px] transition-all duration-300 shadow-sm",
+        isDragOver && "border-primary/50 bg-primary/5 ring-1 ring-primary/20 scale-[1.01]"
       )}
     >
       <div className="flex items-center justify-between pb-3 mb-2 px-1 border-b border-border/40 select-none">

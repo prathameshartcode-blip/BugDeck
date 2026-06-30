@@ -20,7 +20,7 @@ const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => onOpenChange(false)}
-            className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+            className="absolute inset-0 bg-background/60 backdrop-blur-md transition-all duration-300"
           />
           {/* Content Wrapper */}
           <div className="relative z-50 w-full max-w-lg p-4">
@@ -49,7 +49,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
         className={cn(
-          "relative w-full rounded-xl border border-border bg-card p-6 shadow-lg sm:max-w-lg",
+          "relative w-full rounded-2xl border border-border/50 bg-card/95 backdrop-blur-xl p-6 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] sm:max-w-lg dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)]",
           className
         )}
         {...props}

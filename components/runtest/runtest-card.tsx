@@ -42,7 +42,7 @@ export const RunTestCard: React.FC<RunTestCardProps> = ({
       onClick={() => onClick(testCase)}
       className="cursor-grab active:cursor-grabbing select-none"
     >
-      <Card className="hover:border-primary/40 hover:shadow-sm transition-all duration-200 bg-card border border-border">
+      <Card className="hover:border hover:border-gray-500 transition-all duration-100 bg-card border shadow-md  relative group">
         <CardContent className="p-4 space-y-3">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2">

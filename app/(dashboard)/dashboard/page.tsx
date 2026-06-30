@@ -74,11 +74,11 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8 select-none">
       {/* Header */}
-      <div className="flex flex-col gap-1.5 text-left border-b border-border/40 pb-4">
-        <h1 className="text-2xl font-black tracking-tight text-foreground">
+      <div className="flex flex-col gap-2 text-left border-b border-border/40 pb-6 mb-8 mt-2">
+        <h1 className="text-3xl font-black tracking-tight text-foreground bg-clip-text">
           Hello, {user?.full_name || "QA Engineer"}!
         </h1>
-        <p className="text-xs text-muted-foreground font-semibold">{currentDate}</p>
+        <p className="text-sm text-muted-foreground font-medium">{currentDate}</p>
       </div>
 
       {/* 6 Analytics Cards */}
@@ -125,20 +125,24 @@ export default function DashboardPage() {
 
       {/* Charts — Bug Board + RunTest side by side */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-        <TestStatusChart
-          data={bugStatusData}
-          title="Bug Board Status"
-          description="Distribution of bugs across all board columns."
-        />
-        <TestStatusChart
-          data={runTestStatusData}
-          title="Test Cases Execution"
-          description={
-            selectedProject
-              ? `Execution status for "${selectedProject.name}".`
-              : "Execution status across all projects."
-          }
-        />
+        <div className="md:col-span-3">
+          <TestStatusChart
+            data={bugStatusData}
+            title="Bug Board Status"
+            description="Distribution of bugs across all board columns."
+          />
+        </div>
+        <div className="md:col-span-3">
+          <TestStatusChart
+            data={runTestStatusData}
+            title="Test Cases Execution"
+            description={
+              selectedProject
+                ? `Execution status for "${selectedProject.name}".`
+                : "Execution status across all projects."
+            }
+          />
+        </div>
       </div>
     </div>
   );
