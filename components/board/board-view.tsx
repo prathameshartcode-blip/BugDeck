@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Trash, Plus, Pencil, Check, X as XIcon } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface BoardViewProps {
@@ -158,6 +159,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
 
   const handleDropTestCase = async (id: string, newStatus: TestCaseStatus, overId?: string) => {
     await reorderTestCase(id, newStatus, overId);
+    toast.success(`Card moved to ${newStatus}`);
   };
 
   const handleTestCaseClick = (tc: TestCase) => {
@@ -184,6 +186,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
     if (!selectedTestCase) return;
     await updateTestCase(selectedTestCase.id, { status });
     setSelectedTestCase({ ...selectedTestCase, status });
+    toast.success("Status updated");
   };
 
   const handleDeleteTestCase = async () => {
@@ -192,6 +195,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
       await deleteTestCase(selectedTestCase.id);
       setIsDetailOpen(false);
       setSelectedTestCase(null);
+      toast.success("Test case deleted successfully");
     }
   };
 
@@ -207,6 +211,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
     setSelectedCases([]);
     setIsBatchDeleteOpen(false);
     setIsSelectionMode(false);
+    toast.success(`${selectedCases.length} test cases deleted`);
   };
 
   const handleBulkMove = async (status: TestCaseStatus) => {
@@ -215,6 +220,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
     setSelectedCases([]);
     setIsSelectionMode(false);
     setBulkMoveStatus("");
+    toast.success(`${selectedCases.length} test cases moved to ${status}`);
   };
 
   const handleAddStep = () => {
@@ -244,6 +250,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
     setIsCreateOpen(false);
     setNewTestCase({ title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_url: "" });
     setNewSteps([]);
+    toast.success("Test case created successfully");
   };
 
   const getExportUrl = (ids?: string[]) => {

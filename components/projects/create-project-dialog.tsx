@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useProjectStore } from "@/store/project-store";
+import { toast } from "sonner";
 
 interface CreateProjectDialogProps {
   open: boolean;
@@ -34,8 +35,10 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({ open, 
       setName("");
       setDescription("");
       onOpenChange(false);
+      toast.success(`Project "${name}" created successfully`);
     } catch (err) {
       console.error(err);
+      toast.error("Failed to create project. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

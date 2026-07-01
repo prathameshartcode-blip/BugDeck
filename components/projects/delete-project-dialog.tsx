@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { useProjectStore } from "@/store/project-store";
 import type { ProjectWithStats } from "@/types/database";
 import { AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 
 export const DELETE_CONFIRM_PHRASE = "please delete project";
 
@@ -49,8 +50,10 @@ export const DeleteProjectDialog: React.FC<DeleteProjectDialogProps> = ({
     try {
       await deleteProject(project.id);
       onOpenChange(false);
+      toast.success(`Project "${project.name}" deleted`);
     } catch (err) {
       console.error(err);
+      toast.error("Failed to delete project. Please try again.");
     } finally {
       setIsDeleting(false);
     }

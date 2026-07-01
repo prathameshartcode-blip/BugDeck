@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Trash, Plus, Pencil, Check, X as XIcon } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface RunTestViewProps {
@@ -165,6 +166,7 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
 
   const handleDrop = async (id: string, newStatus: RunTestStatus, overId?: string) => {
     await reorderRunTestCase(id, newStatus, overId);
+    toast.success(`Card moved to ${newStatus}`);
   };
 
   const handleTestCaseClick = (tc: RunTestCase) => {
@@ -191,6 +193,7 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
     setSelectedCases([]);
     setIsBatchDeleteOpen(false);
     setIsSelectionMode(false);
+    toast.success(`${selectedCases.length} test cases deleted`);
   };
 
   const handleBulkMove = async (status: RunTestStatus) => {
@@ -199,6 +202,7 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
     setSelectedCases([]);
     setIsSelectionMode(false);
     setBulkMoveStatus("");
+    toast.success(`${selectedCases.length} test cases moved to ${status}`);
   };
 
   const handleFieldUpdate = async (field: keyof RunTestCase, value: string) => {
@@ -211,6 +215,7 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
     if (!selectedCase) return;
     await updateRunTestCase(selectedCase.id, { status });
     setSelectedCase({ ...selectedCase, status });
+    toast.success("Status updated");
   };
 
   const handleDelete = async () => {
@@ -219,6 +224,7 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
       await deleteRunTestCase(selectedCase.id);
       setIsDetailOpen(false);
       setSelectedCase(null);
+      toast.success("Test case deleted successfully");
     }
   };
 
@@ -248,6 +254,7 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
     setIsCreateOpen(false);
     setNewCase({ title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_url: "" });
     setNewSteps([]);
+    toast.success("Test case created successfully");
   };
 
   const getExportUrl = (ids?: string[]) => {

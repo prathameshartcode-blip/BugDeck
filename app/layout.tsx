@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins, Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 
 // Poppins for headings, bold text, hero sections
 const poppins = Poppins({
@@ -32,7 +33,10 @@ export default function RootLayout({
       <body
         className={`${poppins.variable} ${inter.variable} antialiased min-h-screen bg-background text-foreground font-sans`}
       >
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+          <Toaster position="top-right" richColors />
+        </ThemeProvider>
       </body>
     </html>
   );
