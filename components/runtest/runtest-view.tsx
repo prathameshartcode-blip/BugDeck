@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Trash, Plus, Pencil, Check, X as XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 interface RunTestViewProps {
   projectId: string;
@@ -142,9 +143,9 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
   const [isModulesOpen, setIsModulesOpen] = useState(false);
   const [addingModuleName, setAddingModuleName] = useState("");
   const [addingModule, setAddingModule] = useState(false);
-  const [priorityFilter, setPriorityFilter] = useState("all");
-  const [moduleFilter, setModuleFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
+  const [moduleFilter, setModuleFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
 
   const [selectedCases, setSelectedCases] = useState<string[]>([]);
   const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
@@ -153,9 +154,9 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
 
   const projectCases = testCases.filter((tc) => tc.project_id === projectId);
   const filteredCases = projectCases.filter((tc) => {
-    const matchesPriority = priorityFilter === "all" || tc.priority === priorityFilter;
-    const matchesModule = moduleFilter === "all" || tc.module_id === moduleFilter;
-    const matchesStatus = statusFilter === "all" || tc.status === statusFilter;
+    const matchesPriority = priorityFilter.length === 0 || priorityFilter.includes(tc.priority);
+    const matchesModule = moduleFilter.length === 0 || moduleFilter.includes(tc.module_id);
+    const matchesStatus = statusFilter.length === 0 || statusFilter.includes(tc.status);
     return matchesPriority && matchesModule && matchesStatus;
   });
 
@@ -260,44 +261,43 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
   const getExportUrl = (ids?: string[]) => {
     const params = new URLSearchParams();
     params.append("projectId", projectId);
-    if (priorityFilter !== "all") params.append("priority", priorityFilter);
-    if (moduleFilter !== "all") params.append("module", moduleFilter);
-    if (statusFilter !== "all") params.append("status", statusFilter);
+    if (priorityFilter.length > 0) params.append("priority", priorityFilter.join(","));
+    if (moduleFilter.length > 0) params.append("module", moduleFilter.join(","));
+    if (statusFilter.length > 0) params.append("status", statusFilter.join(","));
     if (ids && ids.length > 0)    params.append("ids", ids.join(","));
     return `/api/runtest/export?${params.toString()}`;
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl border border-border/50 bg-card/60 backdrop-blur-md shadow-sm select-none">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl border border-border/50 bg-card/60 backdrop-blur-md shadow-sm select-none relative z-20">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex flex-col gap-1">
             <span className="text-[10px] font-bold text-muted-foreground uppercase">Module</span>
-            <select value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)}
-              className="h-8 rounded-md border border-input bg-background px-2.5 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-              <option value="all">All Modules</option>
-              {modules.filter((m) => m.project_id === projectId).map((mod) => (
-                <option key={mod.id} value={mod.id}>{mod.name}</option>
-              ))}
-            </select>
+            <MultiSelect
+              options={modules.filter((m) => m.project_id === projectId).map((mod) => ({ label: mod.name, value: mod.id }))}
+              selected={moduleFilter}
+              onChange={setModuleFilter}
+              placeholder="Module"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-[10px] font-bold text-muted-foreground uppercase">Status</span>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-8 rounded-md border border-input bg-background px-2.5 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-              <option value="all">All Statuses</option>
-              {ALL_STATUSES.map((st) => (
-                <option key={st} value={st}>{statusLabel(st)}</option>
-              ))}
-            </select>
+            <MultiSelect
+              options={ALL_STATUSES.map((st) => ({ label: statusLabel(st), value: st }))}
+              selected={statusFilter}
+              onChange={setStatusFilter}
+              placeholder="Status"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-[10px] font-bold text-muted-foreground uppercase">Priority</span>
-            <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}
-              className="h-8 rounded-md border border-input bg-background px-2.5 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-              <option value="all">All Priorities</option>
-              {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
+            <MultiSelect
+              options={PRIORITIES.map((p) => ({ label: p, value: p }))}
+              selected={priorityFilter}
+              onChange={setPriorityFilter}
+              placeholder="Priority"
+            />
           </div>
         </div>
 
@@ -382,6 +382,7 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
             selectedCases={selectedCases}
             onSelectToggle={handleSelectToggle}
             isSelectionMode={isSelectionMode}
+            modules={modules}
           />
         ))}
       </div>

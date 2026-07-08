@@ -16,9 +16,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "projectId required" }, { status: 400 });
   }
 
-  const priorityFilter = req.nextUrl.searchParams.get("priority") || "all";
-  const moduleFilter = req.nextUrl.searchParams.get("module") || "all";
-  const statusFilter = req.nextUrl.searchParams.get("status") || "all";
+  const priorityFilter = req.nextUrl.searchParams.get("priority");
+  const moduleFilter = req.nextUrl.searchParams.get("module");
+  const statusFilter = req.nextUrl.searchParams.get("status");
   const idsParam = req.nextUrl.searchParams.get("ids");
 
   let query = supabase
@@ -27,9 +27,18 @@ export async function GET(req: NextRequest) {
     .eq("project_id", projectId)
     .order("created_at", { ascending: true });
 
-  if (priorityFilter !== "all") query = query.eq("priority", priorityFilter);
-  if (moduleFilter !== "all") query = query.eq("module_id", moduleFilter);
-  if (statusFilter !== "all") query = query.eq("status", statusFilter);
+  if (priorityFilter && priorityFilter !== "all") {
+    const priorities = priorityFilter.split(",").map(p => p.trim()).filter(Boolean);
+    if (priorities.length > 0) query = query.in("priority", priorities);
+  }
+  if (moduleFilter && moduleFilter !== "all") {
+    const modulesArr = moduleFilter.split(",").map(m => m.trim()).filter(Boolean);
+    if (modulesArr.length > 0) query = query.in("module_id", modulesArr);
+  }
+  if (statusFilter && statusFilter !== "all") {
+    const statuses = statusFilter.split(",").map(s => s.trim()).filter(Boolean);
+    if (statuses.length > 0) query = query.in("status", statuses);
+  }
   if (idsParam) {
     const idsArray = idsParam.split(',').map(id => id.trim()).filter(Boolean);
     if (idsArray.length > 0) {
@@ -44,8 +53,9 @@ export async function GET(req: NextRequest) {
   }
 
   const headers = [
-    "Title",
+    "Created At",
     "Module",
+    "Title",
     "Status",
     "Priority",
     "Description",
@@ -54,13 +64,12 @@ export async function GET(req: NextRequest) {
     "Actual Result",
     "Failed Reason",
     "Screenshot URL",
-    "Test Case ID",
-    "Created At",
   ];
 
   const csvRows = (rows || []).map((tc: Record<string, unknown> & { modules?: { name?: string } }) => [
-    escapeCsv((tc.title as string) || ""),
+    escapeCsv((tc.created_at as string) || ""),
     escapeCsv(tc.modules?.name || ""),
+    escapeCsv((tc.title as string) || ""),
     escapeCsv((tc.status as string) || "open"),
     escapeCsv((tc.priority as string) || "medium"),
     escapeCsv((tc.description as string) || ""),
@@ -73,8 +82,6 @@ export async function GET(req: NextRequest) {
     escapeCsv((tc.actual_result as string) || ""),
     escapeCsv((tc.failed_reason as string) || ""),
     escapeCsv((tc.screenshot_url as string) || ""),
-    escapeCsv((tc.id as string) || ""),
-    escapeCsv((tc.created_at as string) || ""),
   ]);
 
   const csvContent = [headers.join(","), ...csvRows.map((r) => r.join(","))].join("\n");

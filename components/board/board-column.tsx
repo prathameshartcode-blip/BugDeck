@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { TestCaseCard } from "./test-case-card";
-import type { TestCase, TestCaseStatus } from "@/types/database";
+import type { TestCase, TestCaseStatus, Module } from "@/types/database";
 import { cn } from "@/lib/utils";
 
 interface BoardColumnProps {
@@ -16,6 +16,7 @@ interface BoardColumnProps {
   selectedCases?: string[];
   onSelectToggle?: (id: string) => void;
   isSelectionMode?: boolean;
+  modules?: Module[];
 }
 
 export const BoardColumn: React.FC<BoardColumnProps> = ({
@@ -29,6 +30,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
   selectedCases = [],
   onSelectToggle,
   isSelectionMode,
+  modules = [],
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -88,19 +90,23 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
             No test cases here
           </div>
         ) : (
-          testCases.map((tc) => (
-            <TestCaseCard
-              key={tc.id}
-              testCase={tc}
-              onClick={onTestCaseClick}
-              onDragStart={onDragStart}
-              onDragOver={handleDragOver}
-              onDrop={handleDropOnCard}
-              isSelected={selectedCases.includes(tc.id)}
-              onSelectToggle={onSelectToggle}
-              isSelectionMode={isSelectionMode}
-            />
-          ))
+          testCases.map((tc) => {
+            const modName = modules.find((m) => m.id === tc.module_id)?.name;
+            return (
+              <TestCaseCard
+                key={tc.id}
+                testCase={tc}
+                onClick={onTestCaseClick}
+                onDragStart={onDragStart}
+                onDragOver={handleDragOver}
+                onDrop={handleDropOnCard}
+                isSelected={selectedCases.includes(tc.id)}
+                onSelectToggle={onSelectToggle}
+                isSelectionMode={isSelectionMode}
+                moduleName={modName}
+              />
+            );
+          })
         )}
       </div>
     </div>

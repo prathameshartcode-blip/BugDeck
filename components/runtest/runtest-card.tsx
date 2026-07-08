@@ -14,6 +14,7 @@ interface RunTestCardProps {
   isSelected?: boolean;
   onSelectToggle?: (id: string) => void;
   isSelectionMode?: boolean;
+  moduleName?: string;
 }
 
 const priorityColorMap: Record<TestCasePriority, string> = {
@@ -32,6 +33,7 @@ export const RunTestCard: React.FC<RunTestCardProps> = ({
   isSelected,
   onSelectToggle,
   isSelectionMode,
+  moduleName,
 }) => {
   return (
     <div
@@ -59,11 +61,16 @@ export const RunTestCard: React.FC<RunTestCardProps> = ({
                 />
               )}
             </div>
-            <div className="flex items-center gap-1.5 ml-auto">
-              <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
+            <div className="flex items-center gap-1.5 ml-auto overflow-hidden">
+              {moduleName && (
+                <span className="text-[10px] text-muted-foreground bg-muted border border-border px-1.5 py-0.5 rounded font-medium truncate max-w-[90px]" title={moduleName}>
+                  {moduleName}
+                </span>
+              )}
+              <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider shrink-0">
                 {testCase.priority}
               </span>
-              <span className={cn("h-2 w-2 rounded-full", priorityColorMap[testCase.priority])} />
+              <span className={cn("h-2 w-2 rounded-full shrink-0", priorityColorMap[testCase.priority])} />
             </div>
           </div>
 
