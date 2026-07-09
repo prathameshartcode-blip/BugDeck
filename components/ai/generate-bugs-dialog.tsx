@@ -161,8 +161,7 @@ export function GenerateBugsDialog({
   const [view, setView] = useState<"input" | "results">("input");
   const [description, setDescription] = useState("");
   const [moduleId, setModuleId] = useState("");
-  const [imageBase64, setImageBase64] = useState<string | null>(null);
-  const [mimeType, setMimeType] = useState<string>("image/png");
+  const [images, setImages] = useState<Array<{ base64: string; mimeType: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generated, setGenerated] = useState<AIBug[]>([]);
@@ -175,7 +174,7 @@ export function GenerateBugsDialog({
     setView("input");
     setDescription("");
     setModuleId("");
-    setImageBase64(null);
+    setImages([]);
     setError(null);
     setGenerated([]);
     setSelected(new Set());
@@ -187,7 +186,7 @@ export function GenerateBugsDialog({
   };
 
   const handleGenerate = async () => {
-    if (!description.trim() && !imageBase64) return;
+    if (!description.trim() && images.length === 0) return;
     if (!moduleId) {
       setError("Please select a module before generating.");
       return;
@@ -203,8 +202,7 @@ export function GenerateBugsDialog({
         body: JSON.stringify({
           description: description.trim(),
           moduleName,
-          imageBase64: imageBase64 ?? undefined,
-          mimeType,
+          images,
         }),
       });
 
@@ -319,15 +317,15 @@ export function GenerateBugsDialog({
               {/* Image */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-foreground">
-                  Bug Screenshot{" "}
+                  Bug Screenshots{" "}
                   <span className="text-muted-foreground font-normal">
-                    (optional — AI will read error messages and UI issues from the image)
+                    (optional — add up to 5 images for reference)
                   </span>
                 </label>
                 <ImageDropZone
-                  imageBase64={imageBase64}
-                  onImageChange={(b64, mime) => { setImageBase64(b64); setMimeType(mime); }}
-                  onImageClear={() => setImageBase64(null)}
+                  images={images}
+                  onImageAdd={(b64, mime) => setImages((prev) => [...prev, { base64: b64, mimeType: mime }])}
+                  onImageRemove={(idx) => setImages((prev) => prev.filter((_, i) => i !== idx))}
                 />
               </div>
 
@@ -345,7 +343,7 @@ export function GenerateBugsDialog({
               <Button
                 size="sm"
                 onClick={handleGenerate}
-                disabled={loading || (!description.trim() && !imageBase64) || !moduleId}
+                disabled={loading || (!description.trim() && images.length === 0) || !moduleId}
                 className="gap-2 bg-red-500 hover:bg-red-600 text-white"
               >
                 {loading ? (

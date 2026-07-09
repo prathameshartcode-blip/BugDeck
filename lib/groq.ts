@@ -61,16 +61,30 @@ export async function callGroqText<T>(
 }
 
 /**
- * Call Groq with a vision-capable prompt (text + base64 image).
+ * Call Groq with a vision-capable prompt (text + multiple base64 images).
  * Returns the parsed JSON from the model's response.
  */
 export async function callGroqVision<T>(
   systemPrompt: string,
   userPrompt: string,
-  imageBase64: string,       // pure base64, no data-URL prefix
-  mimeType = "image/png"
+  images: Array<{ base64: string; mimeType: string }>
 ): Promise<T> {
   const key = getKey();
+  
+  const contentArray: any[] = [
+    { type: "text", text: userPrompt }
+  ];
+
+  // Append all images to user message content
+  images.forEach((img) => {
+    contentArray.push({
+      type: "image_url",
+      image_url: {
+        url: `data:${img.mimeType || "image/png"};base64,${img.base64}`,
+      },
+    });
+  });
+
   const res = await fetch(GROQ_BASE, {
     method: "POST",
     headers: {
@@ -85,15 +99,7 @@ export async function callGroqVision<T>(
         { role: "system", content: systemPrompt },
         {
           role: "user",
-          content: [
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:${mimeType};base64,${imageBase64}`,
-              },
-            },
-            { type: "text", text: userPrompt },
-          ],
+          content: contentArray,
         },
       ],
     }),
@@ -110,16 +116,15 @@ export async function callGroqVision<T>(
 }
 
 /**
- * Convenience: calls vision model if imageBase64 is provided, otherwise text model.
+ * Convenience: calls vision model if images are provided, otherwise text model.
  */
 export async function callGroq<T>(
   systemPrompt: string,
   userPrompt: string,
-  imageBase64?: string,
-  mimeType?: string
+  images?: Array<{ base64: string; mimeType: string }>
 ): Promise<T> {
-  if (imageBase64) {
-    return callGroqVision<T>(systemPrompt, userPrompt, imageBase64, mimeType);
+  if (images && images.length > 0) {
+    return callGroqVision<T>(systemPrompt, userPrompt, images);
   }
   return callGroqText<T>(systemPrompt, userPrompt);
 }

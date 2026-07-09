@@ -37,16 +37,15 @@ OUTPUT FORMAT (strict JSON array):
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { description, moduleName, imageBase64, mimeType } = body as {
+    const { description, moduleName, images } = body as {
       description: string;
       moduleName?: string;
-      imageBase64?: string;
-      mimeType?: string;
+      images?: Array<{ base64: string; mimeType: string }>;
     };
 
-    if (!description?.trim() && !imageBase64) {
+    if (!description?.trim() && (!images || images.length === 0)) {
       return NextResponse.json(
-        { error: "Please provide a description or a screenshot." },
+        { error: "Please provide a description or at least one screenshot." },
         { status: 400 }
       );
     }
@@ -54,10 +53,10 @@ export async function POST(req: NextRequest) {
     const userPrompt = [
       description?.trim()
         ? `Bug description: ${description.trim()}`
-        : "Analyze the screenshot and identify all bugs visible.",
+        : "Analyze the attached screenshot(s) and identify all bugs visible.",
       moduleName ? `Module/Feature area: ${moduleName}` : "",
-      imageBase64
-        ? "A screenshot is attached. Carefully examine it for UI bugs, error messages, broken layouts, or any visible issues. Generate a separate bug report for each distinct issue you find."
+      images && images.length > 0
+        ? `We have attached ${images.length} screenshot(s). Carefully examine all of them for UI bugs, error messages, broken layouts, or any visible issues. Generate a separate bug report for each distinct issue you find across the images.`
         : "",
     ]
       .filter(Boolean)
@@ -66,8 +65,7 @@ export async function POST(req: NextRequest) {
     const bugs = await callGroq<AIBug[]>(
       SYSTEM_PROMPT,
       userPrompt,
-      imageBase64,
-      mimeType
+      images
     );
 
     if (!Array.isArray(bugs)) {

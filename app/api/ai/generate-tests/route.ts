@@ -37,11 +37,10 @@ OUTPUT FORMAT (strict JSON array):
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { description, moduleName, imageBase64, mimeType } = body as {
+    const { description, moduleName, images } = body as {
       description: string;
       moduleName?: string;
-      imageBase64?: string;
-      mimeType?: string;
+      images?: Array<{ base64: string; mimeType: string }>;
     };
 
     if (!description?.trim()) {
@@ -54,8 +53,8 @@ export async function POST(req: NextRequest) {
     const userPrompt = [
       `Feature to test: ${description.trim()}`,
       moduleName ? `Module/Feature area: ${moduleName}` : "",
-      imageBase64
-        ? "A screenshot of the UI/design is attached. Use it to generate more specific and context-aware test cases that reference the actual UI elements visible in the image."
+      images && images.length > 0
+        ? `We have attached ${images.length} screenshot(s) of the UI/design. Use them to generate more specific, context-aware, and detailed test cases referencing the actual visual elements and flows depicted in the images.`
         : "",
     ]
       .filter(Boolean)
@@ -64,8 +63,7 @@ export async function POST(req: NextRequest) {
     const testCases = await callGroq<AITestCase[]>(
       SYSTEM_PROMPT,
       userPrompt,
-      imageBase64,
-      mimeType
+      images
     );
 
     if (!Array.isArray(testCases)) {
