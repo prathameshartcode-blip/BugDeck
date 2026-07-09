@@ -16,6 +16,10 @@ import {
   Clock,
   Ban,
   MessageSquare,
+  Sparkles,
+  Image,
+  Badge,
+  Bug,
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -53,18 +57,18 @@ export default function LandingPage() {
             className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full border"
             style={{ color: "#89295E", backgroundColor: "rgba(137,41,94,0.08)", borderColor: "rgba(137,41,94,0.25)" }}
           >
-            <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ backgroundColor: "#89295E" }} />
-            By Artcode Pvt. Ltd.
+            <Sparkles className="h-3 w-3" />
+            AI-Powered Test &amp; Defect Generation
           </div>
 
           <h1 className="text-5xl font-black leading-[1.05] tracking-tight">
             Track bugs.<br />
             Run tests.<br />
-            <span className="text-white/25">Skip Jira.</span>
+            <span className="text-white/25">Supercharged by AI.</span>
           </h1>
 
           <p className="text-white/50 text-base leading-relaxed max-w-sm">
-            BugDeck is a focused QA tool for dev and QA teams. Track bugs on a kanban board, execute test cases in RunTest, import via CSV, and export clean reports — all in one place.
+            BugDeck is a smart QA tool. Track defects, execute test cases, import/export CSV files, and now: **instantly generate test cases or report multi-defect issues using screenshots with our free vision-integrated AI**.
           </p>
 
           <div className="flex items-center gap-4 pt-2">
@@ -179,6 +183,65 @@ export default function LandingPage() {
             </div>
           </div>
 
+          {/* AI Generation module */}
+          <div className="rounded-2xl border border-white/8 bg-white/3 p-8 space-y-5 md:col-span-2 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-80 h-80 rounded-full blur-3xl -z-10" style={{ backgroundColor: "rgba(137,41,94,0.08)" }} />
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg flex items-center justify-center bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30">
+                <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
+              </div>
+              <div>
+                <p className="font-bold text-sm flex items-center gap-2">
+                  AI Test &amp; Bug Generator
+                  <span className="text-[9px] font-bold text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20 uppercase tracking-widest">New</span>
+                </p>
+                <p className="text-[10px] text-white/30 font-medium uppercase tracking-wider">Groq Vision &amp; LLama 3 Integration</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+              <div className="space-y-4">
+                <p className="text-sm text-white/40 leading-relaxed">
+                  Accelerate your QA pipeline. Provide a feature description, or simply upload/paste a screenshot of your UI. Our integrated AI reads the layout, generates structured test cases, detects visual flaws, and reports multiple bugs in one go.
+                </p>
+                <div className="space-y-2">
+                  <StatusRow icon={<Image className="h-3 w-3 text-purple-400" />} label="Ctrl+V Image Paste support for Vision analysis" />
+                  <StatusRow icon={<Sparkles className="h-3 w-3 text-purple-400" />} label="Generate 5-8 structured test cases in seconds" />
+                  <StatusRow icon={<Bug className="h-3 w-3 text-purple-400" />} label="De-duplicate and separate multiple issues from one input" />
+                  <StatusRow icon={<CheckCircle2 className="h-3 w-3 text-purple-400" />} label="Select and import directly to your active boards" />
+                </div>
+              </div>
+              <div className="rounded-xl border border-white/5 bg-white/1 p-4 space-y-3">
+                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                  <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="h-3 w-3 text-purple-400" /> AI Insights Preview
+                  </span>
+                  <Badge variant="outline" className="text-[9px] border-purple-500/30 text-purple-400 bg-purple-500/5">Vision Enabled</Badge>
+                </div>
+                <div className="space-y-2.5">
+                  <div className="bg-white/3 rounded-lg p-2 border border-white/5">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="h-4 w-4 rounded bg-purple-500/20 flex items-center justify-center text-[9px] font-bold text-purple-400">1</div>
+                      <span className="text-[10px] font-bold text-white/70">Analyze screenshot context</span>
+                    </div>
+                    <p className="text-[10px] text-white/40 pl-6 leading-normal">
+                      Pasted dashboard layout: Found misalignment in header and 500 error in auth-status response.
+                    </p>
+                  </div>
+                  <div className="bg-white/3 rounded-lg p-2 border border-white/5">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="h-4 w-4 rounded bg-purple-500/20 flex items-center justify-center text-[9px] font-bold text-purple-400">2</div>
+                      <span className="text-[10px] font-bold text-white/70">Identified Bugs / Test Steps</span>
+                    </div>
+                    <div className="pl-6 space-y-1">
+                      <p className="text-[9px] text-red-400 font-semibold flex items-center gap-1">❌ Bug 1: Header rendering overlap (Critical)</p>
+                      <p className="text-[9px] text-red-400 font-semibold flex items-center gap-1">❌ Bug 2: Auth status error code 500 (High)</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -242,9 +305,19 @@ export default function LandingPage() {
             desc="Click any card to log actual results, failure reasons, screenshot URLs, and step-by-step actions without leaving the board."
           />
           <Feature
-            icon={<Clock className="h-4 w-4" />}
-            title="Per-project isolation"
-            desc="Each project has its own board, modules, and test cases. Switch projects from the sidebar — nothing bleeds across."
+            icon={<Sparkles className="h-4 w-4" />}
+            title="AI Test Case Generator"
+            desc="Write a feature description or paste a screenshot, select a module, and import structured cases directly into your test suites."
+          />
+          <Feature
+            icon={<Bug className="h-4 w-4" />}
+            title="AI Bug Reporter"
+            desc="Enter a list of problems or paste error designs. AI parses the issues, maps expected/actual results, and splits them into distinct cards."
+          />
+          <Feature
+            icon={<Image className="h-4 w-4" />}
+            title="Vision Model Analysis"
+            desc="Direct copy-paste (Ctrl+V) from screenshots to enable Groq to extract details, steps, and priority directly from visual mockups."
           />
         </div>
       </section>

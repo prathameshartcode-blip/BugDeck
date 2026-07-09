@@ -128,6 +128,8 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
         column_id: input.status,
         steps: input.steps,
         expected_result: input.expected_result,
+        actual_result: input.actual_result,
+        notes: input.notes,
         screenshot_url: input.screenshot_url,
         created_by: userId,
       };
