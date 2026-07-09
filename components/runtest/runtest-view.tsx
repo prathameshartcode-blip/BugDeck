@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { RunTestColumn } from "./runtest-column";
 import { useRunTestStore } from "@/store/runtest-store";
 import type { RunTestCase, RunTestStatus, TestCasePriority } from "@/types/database";
@@ -9,10 +10,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash, Plus, Pencil, Check, X as XIcon } from "lucide-react";
+import { Trash, Plus, Pencil, Check, X as XIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { GenerateTestsDialog } from "@/components/ai/generate-tests-dialog";
 
 interface RunTestViewProps {
   projectId: string;
@@ -147,10 +149,20 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
   const [moduleFilter, setModuleFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
 
+  // Pre-fill status filter from URL ?status= param (e.g. coming from dashboard chart click)
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const statusParam = searchParams.get("status");
+    if (statusParam) {
+      setStatusFilter([statusParam]);
+    }
+  }, [searchParams]);
+
   const [selectedCases, setSelectedCases] = useState<string[]>([]);
   const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [bulkMoveStatus, setBulkMoveStatus] = useState<RunTestStatus | "">("");
+  const [isAIOpen, setIsAIOpen] = useState(false);
 
   const projectCases = testCases.filter((tc) => tc.project_id === projectId);
   const filteredCases = projectCases.filter((tc) => {
@@ -361,6 +373,15 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
               </Button>
             </div>
           )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
+            onClick={() => setIsAIOpen(true)}
+          >
+            <Sparkles className="h-4 w-4" /> Generate with AI
+          </Button>
 
           <Button onClick={() => setIsCreateOpen(true)} size="sm" className="gap-2">
             <Plus className="h-4 w-4" /> New Test Case
@@ -767,6 +788,35 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── AI Test Case Generator Dialog ── */}
+      <GenerateTestsDialog
+        open={isAIOpen}
+        onOpenChange={setIsAIOpen}
+        projectId={projectId}
+        modules={modules}
+        onImport={async (cases) => {
+          let count = 0;
+          for (const tc of cases) {
+            await createRunTestCase({
+              title: tc.title,
+              description: tc.description || null,
+              priority: tc.priority,
+              status: "open",
+              steps: tc.steps.map((s, i) => ({ order: i + 1, action: s.action, expected: s.expected })),
+              expected_result: tc.expected_result,
+              actual_result: null,
+              failed_reason: null,
+              screenshot_url: null,
+              module_id: tc.module_id || "",
+              project_id: projectId,
+            });
+            count++;
+          }
+          toast.success(`✨ ${count} AI-generated test case${count !== 1 ? "s" : ""} imported!`);
+        }}
+      />
     </div>
   );
 };
+

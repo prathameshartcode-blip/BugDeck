@@ -35,11 +35,11 @@ export default function DashboardPage() {
   const bugsToDiscuss  = projects.reduce((acc, p) => acc + p.blocked_count, 0);      // todiscuss
 
   const bugStatusData = [
-    { name: "Closed",     value: bugsClosed,    color: "oklch(0.65 0.22 160)"  },
-    { name: "Reopened",   value: bugsReopened,  color: "oklch(0.65 0.25 27.32)"},
-    { name: "To Discuss", value: bugsToDiscuss, color: "oklch(0.70 0.22 45)"   },
-    { name: "Open",       value: bugsOpen,      color: "oklch(0.7 0.02 240)"   },
-    { name: "Fixed",      value: bugsWorking,   color: "oklch(0.75 0.15 80)"   },
+    { name: "Closed",     value: bugsClosed,    color: "oklch(0.65 0.22 160)",   statusKey: "closed"    },
+    { name: "Reopened",   value: bugsReopened,  color: "oklch(0.65 0.25 27.32)", statusKey: "reopen"    },
+    { name: "To Discuss", value: bugsToDiscuss, color: "oklch(0.70 0.22 45)",    statusKey: "todiscuss" },
+    { name: "Open",       value: bugsOpen,      color: "oklch(0.7 0.02 240)",    statusKey: "open"      },
+    { name: "Fixed",      value: bugsWorking,   color: "oklch(0.75 0.15 80)",    statusKey: "Fixed"     },
   ];
 
   // ── RunTest stats ────────────────────────────────────────────────────────
@@ -56,12 +56,12 @@ export default function DashboardPage() {
   const rtToDiscuss  = runCases.filter((tc) => tc.status === "to_discuss").length;
 
   const runTestStatusData = [
-    { name: "Passed",      value: rtPassed,     color: "oklch(0.65 0.22 160)"  },
-    { name: "Failed",      value: rtFailed,     color: "oklch(0.65 0.25 27.32)"},
-    { name: "Blocked",     value: rtBlocked,    color: "oklch(0.70 0.22 45)"   },
-    { name: "In Progress", value: rtInProgress, color: "oklch(0.60 0.18 220)"  },
-    { name: "Open",        value: rtOpen,       color: "oklch(0.7 0.02 240)"   },
-    { name: "To Discuss",  value: rtToDiscuss,  color: "oklch(0.70 0.20 300)"  },
+    { name: "Passed",      value: rtPassed,     color: "oklch(0.65 0.22 160)",   statusKey: "passed"      },
+    { name: "Failed",      value: rtFailed,     color: "oklch(0.65 0.25 27.32)", statusKey: "failed"      },
+    { name: "Blocked",     value: rtBlocked,    color: "oklch(0.70 0.22 45)",    statusKey: "blocked"     },
+    { name: "In Progress", value: rtInProgress, color: "oklch(0.60 0.18 220)",   statusKey: "in_progress" },
+    { name: "Open",        value: rtOpen,       color: "oklch(0.7 0.02 240)",    statusKey: "open"        },
+    { name: "To Discuss",  value: rtToDiscuss,  color: "oklch(0.70 0.20 300)",   statusKey: "to_discuss"  },
   ];
 
   const currentDate = new Date().toLocaleDateString("en-US", {
@@ -130,6 +130,8 @@ export default function DashboardPage() {
             data={bugStatusData}
             title="Bug Board Status"
             description="Distribution of bugs across all board columns."
+            projectId={selectedProject?.id}
+            boardType="board"
           />
         </div>
         <div className="md:col-span-3">
@@ -141,6 +143,8 @@ export default function DashboardPage() {
                 ? `Execution status for "${selectedProject.name}".`
                 : "Execution status across all projects."
             }
+            projectId={selectedProject?.id}
+            boardType="runtest"
           />
         </div>
       </div>

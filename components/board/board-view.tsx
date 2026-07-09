@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { BoardColumn } from "./board-column";
 import { useBoardStore } from "@/store/board-store";
 import type { TestCase, TestCaseStatus, TestCasePriority } from "@/types/database";
@@ -10,10 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Trash, Plus, Pencil, Check, X as XIcon } from "lucide-react";
+import { Trash, Plus, Pencil, Check, X as XIcon, Sparkles, Bug } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { GenerateBugsDialog } from "@/components/ai/generate-bugs-dialog";
 
 interface BoardViewProps {
   projectId: string;
@@ -128,6 +130,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [bulkMoveStatus, setBulkMoveStatus] = useState<TestCaseStatus | "">("");
+  const [isAIOpen, setIsAIOpen] = useState(false);
 
   // Tracks live edits inside the detail dialog before saving
   const [editingCase, setEditingCase] = useState<Partial<TestCase>>({});
@@ -144,6 +147,15 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
   const [moduleFilter,   setModuleFilter]   = useState<string[]>([]);
   const [statusFilter,   setStatusFilter]   = useState<string[]>([]);
+
+  // Pre-fill status filter from URL ?status= param (e.g. coming from dashboard chart click)
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const statusParam = searchParams.get("status");
+    if (statusParam) {
+      setStatusFilter([statusParam]);
+    }
+  }, [searchParams]);
 
   const projectCases  = testCases.filter((tc) => tc.project_id === projectId);
   const filteredCases = projectCases.filter((tc) => {
@@ -366,6 +378,15 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
               </Button>
             </div>
           )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 border-red-500/40 text-red-500 hover:bg-red-500/10 hover:text-red-500"
+            onClick={() => setIsAIOpen(true)}
+          >
+            <Sparkles className="h-4 w-4" /> Report Bug with AI
+          </Button>
 
           <Button onClick={() => setIsCreateOpen(true)} size="sm" className="gap-2">
             <Plus className="h-4 w-4" /> New Bug
@@ -809,6 +830,35 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── AI Bug Generator Dialog ── */}
+      <GenerateBugsDialog
+        open={isAIOpen}
+        onOpenChange={setIsAIOpen}
+        projectId={projectId}
+        modules={modules}
+        onImport={async (bugs) => {
+          let count = 0;
+          for (const bug of bugs) {
+            await createTestCase({
+              title: bug.title,
+              description: bug.description || null,
+              priority: bug.priority,
+              status: "open",
+              type: "functional",
+              steps: bug.steps.map((s, i) => ({ order: i + 1, action: s.action, expected: s.expected })),
+              expected_result: bug.expected_result,
+              actual_result: bug.actual_result || null,
+              screenshot_url: null,
+              notes: null,
+              module_id: bug.module_id || "",
+              project_id: projectId,
+            });
+            count++;
+          }
+          toast.success(`✨ ${count} AI-generated bug${count !== 1 ? "s" : ""} added to board!`);
+        }}
+      />
     </div>
   );
-};
+};
