@@ -18,9 +18,9 @@ import {
   MessageSquare,
   Sparkles,
   Image,
-  Badge,
   Bug,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export default function LandingPage() {
   return (
