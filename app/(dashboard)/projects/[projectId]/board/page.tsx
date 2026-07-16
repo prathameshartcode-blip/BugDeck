@@ -1,18 +1,20 @@
 "use client";
 /** @jsxImportSource react */
 
-import React from "react";
+import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { BoardView } from "@/components/board/board-view";
 import { useActiveProject } from "@/hooks/use-active-project";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EditContextDialog } from "@/components/projects/edit-context-dialog";
 
 export default function BoardPage() {
   const params = useParams();
   const router = useRouter();
   const projectId = params.projectId as string;
   const { activeProject, urlProjectId } = useActiveProject();
+  const [contextDialogOpen, setContextDialogOpen] = useState(false);
 
   const currentProject = activeProject?.id === projectId ? activeProject : null;
 
@@ -46,9 +48,24 @@ export default function BoardPage() {
             </p>
           </div>
         </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setContextDialogOpen(true)}
+          className="gap-1.5"
+        >
+          <FileText className="h-3.5 w-3.5" /> Project Context
+        </Button>
       </div>
 
       <BoardView projectId={projectId} />
+
+      <EditContextDialog
+        open={contextDialogOpen}
+        onOpenChange={setContextDialogOpen}
+        projectId={projectId}
+      />
     </div>
   );
 }

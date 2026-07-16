@@ -218,6 +218,21 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
     );
   };
 
+  const handleSelectAllInColumn = (ids: string[], selectAll: boolean) => {
+    setSelectedCases((prev) => {
+      if (selectAll) {
+        // Add any IDs not already in the selection
+        const toAdd = ids.filter((id) => !prev.includes(id));
+        return [...prev, ...toAdd];
+      } else {
+        // Remove all IDs belonging to this column
+        return prev.filter((id) => !ids.includes(id));
+      }
+    });
+    // Ensure selection mode is on
+    if (!isSelectionMode) setIsSelectionMode(true);
+  };
+
   const handleBatchDelete = async () => {
     if (selectedCases.length === 0) return;
     await deleteMultipleTestCases(selectedCases);
@@ -408,6 +423,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
             onDropTestCase={handleDropTestCase}
             selectedCases={selectedCases}
             onSelectToggle={handleSelectToggle}
+            onSelectAllInColumn={handleSelectAllInColumn}
             isSelectionMode={isSelectionMode}
             modules={modules}
           />

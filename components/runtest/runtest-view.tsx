@@ -200,6 +200,18 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
     );
   };
 
+  const handleSelectAllInColumn = (ids: string[], selectAll: boolean) => {
+    setSelectedCases((prev) => {
+      if (selectAll) {
+        const toAdd = ids.filter((id) => !prev.includes(id));
+        return [...prev, ...toAdd];
+      } else {
+        return prev.filter((id) => !ids.includes(id));
+      }
+    });
+    if (!isSelectionMode) setIsSelectionMode(true);
+  };
+
   const handleBatchDelete = async () => {
     if (selectedCases.length === 0) return;
     await deleteMultipleRunTestCases(selectedCases);
@@ -402,6 +414,7 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
             onDropTestCase={handleDrop}
             selectedCases={selectedCases}
             onSelectToggle={handleSelectToggle}
+            onSelectAllInColumn={handleSelectAllInColumn}
             isSelectionMode={isSelectionMode}
             modules={modules}
           />

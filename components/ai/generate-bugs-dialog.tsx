@@ -12,9 +12,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageDropZone } from "./image-drop-zone";
-import { Bug, ArrowLeft, ChevronDown, ChevronRight, Loader2, CheckSquare, Square, Sparkles } from "lucide-react";
+import { Bug, ArrowLeft, ChevronDown, ChevronRight, Loader2, CheckSquare, Square, Sparkles, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Module } from "@/types/database";
+import { useProjectStore } from "@/store/project-store";
+import { EditContextDialog } from "@/components/projects/edit-context-dialog";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -167,6 +169,11 @@ export function GenerateBugsDialog({
   const [generated, setGenerated] = useState<AIBug[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [importing, setImporting] = useState(false);
+  const [contextDialogOpen, setContextDialogOpen] = useState(false);
+
+  const { projects } = useProjectStore();
+  const project = projects.find((p) => p.id === projectId);
+  const projectContext = project?.description?.trim() ?? "";
 
   const projectModules = modules.filter((m) => m.project_id === projectId);
 
@@ -203,6 +210,7 @@ export function GenerateBugsDialog({
           description: description.trim(),
           moduleName,
           images,
+          projectId,
         }),
       });
 
@@ -252,6 +260,7 @@ export function GenerateBugsDialog({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
         onClose={() => handleClose(false)}
@@ -271,6 +280,31 @@ export function GenerateBugsDialog({
             </DialogHeader>
 
             <div className="flex-1 overflow-y-auto space-y-4 py-2 pr-1">
+              {/* Project context preview */}
+              <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                    Project Context
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setContextDialogOpen(true)}
+                    className="flex items-center gap-1 text-[10px] font-semibold text-primary hover:underline flex-shrink-0"
+                  >
+                    <Pencil className="h-3 w-3" /> Edit
+                  </button>
+                </div>
+                {projectContext ? (
+                  <p className="text-[11px] text-muted-foreground line-clamp-2">
+                    {projectContext}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground/80 italic">
+                    No project context set — add some to improve AI accuracy.
+                  </p>
+                )}
+              </div>
+
               {/* Description */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-foreground">
@@ -422,5 +456,12 @@ export function GenerateBugsDialog({
         )}
       </DialogContent>
     </Dialog>
+
+    <EditContextDialog
+      open={contextDialogOpen}
+      onOpenChange={setContextDialogOpen}
+      projectId={projectId}
+    />
+    </>
   );
 }

@@ -15,6 +15,7 @@ interface BoardColumnProps {
   onDropTestCase: (id: string, status: TestCaseStatus, overId?: string) => void;
   selectedCases?: string[];
   onSelectToggle?: (id: string) => void;
+  onSelectAllInColumn?: (ids: string[], selectAll: boolean) => void;
   isSelectionMode?: boolean;
   modules?: Module[];
 }
@@ -29,6 +30,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
   onDropTestCase,
   selectedCases = [],
   onSelectToggle,
+  onSelectAllInColumn,
   isSelectionMode,
   modules = [],
 }) => {
@@ -62,6 +64,16 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
     }
   };
 
+  const columnIds = testCases.map((tc) => tc.id);
+  const allSelected = columnIds.length > 0 && columnIds.every((id) => selectedCases.includes(id));
+  const someSelected = columnIds.some((id) => selectedCases.includes(id));
+
+  const handleColumnCheckbox = () => {
+    if (onSelectAllInColumn) {
+      onSelectAllInColumn(columnIds, !allSelected);
+    }
+  };
+
   return (
     <div
       onDragOver={handleDragOver}
@@ -75,6 +87,29 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between pb-3 mb-2 px-1 border-b border-border/40 select-none">
         <div className="flex items-center gap-2">
+          {isSelectionMode && columnIds.length > 0 && (
+            <button
+              type="button"
+              onClick={handleColumnCheckbox}
+              className="flex-shrink-0 h-4 w-4 rounded border border-border flex items-center justify-center transition-colors hover:border-primary"
+              style={{
+                backgroundColor: allSelected ? 'hsl(var(--primary))' : someSelected ? 'hsl(var(--primary) / 0.2)' : 'transparent',
+                borderColor: (allSelected || someSelected) ? 'hsl(var(--primary))' : undefined,
+              }}
+              title={allSelected ? 'Deselect all in column' : 'Select all in column'}
+            >
+              {allSelected && (
+                <svg className="h-2.5 w-2.5 text-primary-foreground" fill="none" viewBox="0 0 12 12">
+                  <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+              {!allSelected && someSelected && (
+                <svg className="h-2.5 w-2.5" style={{ color: 'hsl(var(--primary))' }} fill="none" viewBox="0 0 12 12">
+                  <path d="M2.5 6h7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              )}
+            </button>
+          )}
           <span className={cn("h-2.5 w-2.5 rounded-full", color)} />
           <h3 className="text-xs font-bold text-foreground capitalize">{title}</h3>
         </div>

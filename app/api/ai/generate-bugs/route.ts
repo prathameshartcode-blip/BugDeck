@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callGroq } from "@/lib/groq";
+import { getSupabaseServerClient } from "@/lib/supabase-server";
 
 export interface AIBug {
   title: string;
@@ -8,6 +9,23 @@ export interface AIBug {
   steps: { action: string; expected: string }[];
   expected_result: string;
   actual_result: string;
+}
+
+/** Fetches the project's `description` (used as AI context). Returns "" on any failure. */
+async function getProjectContext(projectId?: string): Promise<string> {
+  if (!projectId) return "";
+  try {
+    const supabase = getSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("projects")
+      .select("description")
+      .eq("id", projectId)
+      .single();
+    if (error || !data?.description) return "";
+    return String(data.description).trim();
+  } catch {
+    return "";
+  }
 }
 
 const SYSTEM_PROMPT = `You are an expert QA engineer who specializes in bug reporting. Your job is to analyze a bug description (and optionally a screenshot) and generate one or more well-structured bug reports.
@@ -37,10 +55,11 @@ OUTPUT FORMAT (strict JSON array):
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { description, moduleName, images } = body as {
+    const { description, moduleName, images, projectId } = body as {
       description: string;
       moduleName?: string;
       images?: Array<{ base64: string; mimeType: string }>;
+      projectId?: string;
     };
 
     if (!description?.trim() && (!images || images.length === 0)) {
@@ -49,6 +68,11 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const projectContext = await getProjectContext(projectId);
+    const finalSystemPrompt = projectContext
+      ? `PROJECT CONTEXT:\n${projectContext}\n---\n${SYSTEM_PROMPT}`
+      : SYSTEM_PROMPT;
 
     const userPrompt = [
       description?.trim()
@@ -63,7 +87,7 @@ export async function POST(req: NextRequest) {
       .join("\n\n");
 
     const bugs = await callGroq<AIBug[]>(
-      SYSTEM_PROMPT,
+      finalSystemPrompt,
       userPrompt,
       images
     );
