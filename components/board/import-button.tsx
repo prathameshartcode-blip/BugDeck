@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { useBoardStore } from "@/store/board-store";
 import { useAuthStore } from "@/store/auth-store";
+import { ModuleMappingDialog, SKIP_MODULE } from "@/components/ui/module-mapping-dialog";
 
 // ── Expected columns ───────────────────────────────────────────────
 const EXPECTED_COLUMNS = [
@@ -166,6 +167,13 @@ export function ImportButton({ projectId, onImported }: ImportButtonProps) {
     unmatchedColumns: string[];
   } | null>(null);
 
+  // ── Module mapping state ─────────────────────────────────────────
+  const [mappingOpen, setMappingOpen] = useState(false);
+  const [pendingRows, setPendingRows] = useState<Record<string, string>[]>([]);
+  const [pendingUnmatched, setPendingUnmatched] = useState<string[]>([]);
+  const [pendingExactMap, setPendingExactMap] = useState<Record<string, string>>({});
+  const [pendingUnmatchedColumns, setPendingUnmatchedColumns] = useState<string[]>([]);
+
   // ── Parse CSV → array of row objects (RFC 4180 compliant) ────
   // Handles multi-line quoted fields correctly — does NOT split on
   // newlines first, so Steps cells with real \n inside quotes work.
@@ -255,7 +263,6 @@ export function ImportButton({ projectId, onImported }: ImportButtonProps) {
         fc.toLowerCase() !== "created at"
     );
 
-    // Check required columns
     const missingRequired = EXPECTED_COLUMNS
       .filter((c) => c.required)
       .filter((c) => !fileColumns.some((fc) => fc.toLowerCase() === c.name.toLowerCase()));
@@ -271,13 +278,37 @@ export function ImportButton({ projectId, onImported }: ImportButtonProps) {
       return;
     }
 
-    // ── Build module name → id map from store (same project) ──
-    const moduleMap: Record<string, string> = {};
-    modules
-      .filter((m) => m.project_id === projectId)
-      .forEach((m) => { moduleMap[m.name.toLowerCase()] = m.id; });
+    // ── Build exact module name → id map ──────────────────────────
+    const projectMods = modules.filter((m) => m.project_id === projectId);
+    const exactMap: Record<string, string> = {};
+    projectMods.forEach((m) => { exactMap[m.name.toLowerCase()] = m.id; });
 
-    // ── Insert rows ────────────────────────────────────────────
+    // ── Collect unique CSV module names that don't exactly match ──
+    const uniqueCsvModules = Array.from(
+      new Set(rows.map((r) => col(r, "Module")).filter(Boolean))
+    );
+    const unmatched = uniqueCsvModules.filter((n) => !exactMap[n.toLowerCase()]);
+
+    if (unmatched.length > 0) {
+      // Show mapping dialog before inserting
+      setPendingRows(rows);
+      setPendingUnmatched(unmatched);
+      setPendingExactMap(exactMap);
+      setPendingUnmatchedColumns(unmatchedColumns);
+      setMappingOpen(true);
+      return;
+    }
+
+    // No unmatched modules — insert immediately
+    await doInsert(rows, exactMap, unmatchedColumns);
+  };
+
+  // ── Actual DB insert (called after mapping confirmed or directly) ─
+  const doInsert = async (
+    rows: Record<string, string>[],
+    moduleMap: Record<string, string>,
+    unmatchedColumns: string[]
+  ) => {
     setImporting(true);
     let imported = 0;
     let skipped  = 0;
@@ -285,22 +316,16 @@ export function ImportButton({ projectId, onImported }: ImportButtonProps) {
 
     for (let i = 0; i < rows.length; i++) {
       const row    = rows[i];
-
-      // Use title from CSV, or fall back to "Bug #N"
       const title = col(row, "Title") || `Bug #${i + 1}`;
 
-      // Priority — default medium
       let priority = col(row, "Priority").toLowerCase();
       if (!VALID_PRIORITIES.includes(priority)) priority = "medium";
 
-      // Status — normalize to lowercase before lookup, handles "FixEd", "FIXED", "fixed", etc.
       const status = resolveStatus(col(row, "Status"));
 
-      // Module — match by name (case-insensitive)
       const moduleName = col(row, "Module").toLowerCase();
       const moduleId   = moduleName ? (moduleMap[moduleName] ?? null) : null;
 
-      // Steps — pipe-separated string → array
       const stepsRaw = col(row, "Steps");
       const steps = stepsRaw
         ? stepsRaw.split("|").map((s, idx) => ({ order: idx + 1, action: s.trim(), expected: "" }))
@@ -337,10 +362,46 @@ export function ImportButton({ projectId, onImported }: ImportButtonProps) {
     if (imported > 0) onImported();
   };
 
+  // ── Called when user confirms module mapping dialog ─────────────
+  const handleMappingConfirm = async (userMapping: Record<string, string>) => {
+    setMappingOpen(false);
+
+    // Collect module names the user chose to skip entirely
+    const skipNames = new Set<string>();
+    const merged: Record<string, string> = { ...pendingExactMap };
+
+    for (const [csvName, value] of Object.entries(userMapping)) {
+      if (value === SKIP_MODULE) {
+        skipNames.add(csvName.toLowerCase());
+      } else if (value) {
+        // map non-skip, non-empty values
+        merged[csvName.toLowerCase()] = value;
+      }
+    }
+
+    // Filter out rows whose CSV module was marked as skip
+    const filteredRows =
+      skipNames.size > 0
+        ? pendingRows.filter((r) => !skipNames.has(col(r, "Module").toLowerCase()))
+        : pendingRows;
+
+    await doInsert(filteredRows, merged, pendingUnmatchedColumns);
+  };
+
   return (
     <>
       {/* Hidden file input */}
       <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleFile} />
+
+      {/* Module Mapping Dialog */}
+      {mappingOpen && (
+        <ModuleMappingDialog
+          unmatchedNames={pendingUnmatched}
+          projectModules={modules.filter((m) => m.project_id === projectId).map((m) => ({ id: m.id, name: m.name }))}
+          onConfirm={handleMappingConfirm}
+          onCancel={() => setMappingOpen(false)}
+        />
+      )}
 
       {/* Import button */}
       <Button

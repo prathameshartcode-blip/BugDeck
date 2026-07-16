@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { useRunTestStore } from "@/store/runtest-store";
 import { useAuthStore } from "@/store/auth-store";
+import { ModuleMappingDialog } from "@/components/ui/module-mapping-dialog";
 
 const EXPECTED_COLUMNS = [
   { name: "Title", required: false },
@@ -143,6 +144,13 @@ export function RunTestImportButton({ projectId, onImported }: RunTestImportButt
     unmatchedColumns: string[];
   } | null>(null);
 
+  // ── Module mapping state ─────────────────────────────────────────
+  const [mappingOpen, setMappingOpen] = useState(false);
+  const [pendingRows, setPendingRows] = useState<Record<string, string>[]>([]);
+  const [pendingUnmatched, setPendingUnmatched] = useState<string[]>([]);
+  const [pendingExactMap, setPendingExactMap] = useState<Record<string, string>>({});
+  const [pendingUnmatchedColumns, setPendingUnmatchedColumns] = useState<string[]>([]);
+
   const parseCsv = (text: string): Record<string, string>[] => {
     const cleaned = text.replace(/^\uFEFF/, "");
     if (!cleaned.trim()) return [];
@@ -213,11 +221,35 @@ export function RunTestImportButton({ projectId, onImported }: RunTestImportButt
         fc.toLowerCase() !== "created at"
     );
 
-    const moduleMap: Record<string, string> = {};
-    modules
-      .filter((m) => m.project_id === projectId)
-      .forEach((m) => { moduleMap[m.name.toLowerCase()] = m.id; });
+    // ── Build exact module name → id map ──────────────────────────
+    const projectMods = modules.filter((m) => m.project_id === projectId);
+    const exactMap: Record<string, string> = {};
+    projectMods.forEach((m) => { exactMap[m.name.toLowerCase()] = m.id; });
 
+    // ── Collect unique CSV module names that don't exactly match ──
+    const uniqueCsvModules = Array.from(
+      new Set(rows.map((r) => col(r, "Module")).filter(Boolean))
+    );
+    const unmatched = uniqueCsvModules.filter((n) => !exactMap[n.toLowerCase()]);
+
+    if (unmatched.length > 0) {
+      setPendingRows(rows);
+      setPendingUnmatched(unmatched);
+      setPendingExactMap(exactMap);
+      setPendingUnmatchedColumns(unmatchedColumns);
+      setMappingOpen(true);
+      return;
+    }
+
+    await doInsert(rows, exactMap, unmatchedColumns);
+  };
+
+  // ── Actual DB insert ──────────────────────────────────────────
+  const doInsert = async (
+    rows: Record<string, string>[],
+    moduleMap: Record<string, string>,
+    unmatchedColumns: string[]
+  ) => {
     setImporting(true);
     let imported = 0;
     let skipped = 0;
@@ -270,9 +302,29 @@ export function RunTestImportButton({ projectId, onImported }: RunTestImportButt
     if (imported > 0) onImported();
   };
 
+  // ── Module mapping confirmed ─────────────────────────────────
+  const handleMappingConfirm = async (userMapping: Record<string, string>) => {
+    setMappingOpen(false);
+    const merged: Record<string, string> = { ...pendingExactMap };
+    for (const [csvName, moduleId] of Object.entries(userMapping)) {
+      if (moduleId) merged[csvName.toLowerCase()] = moduleId;
+    }
+    await doInsert(pendingRows, merged, pendingUnmatchedColumns);
+  };
+
   return (
     <>
       <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleFile} />
+
+      {/* Module Mapping Dialog */}
+      {mappingOpen && (
+        <ModuleMappingDialog
+          unmatchedNames={pendingUnmatched}
+          projectModules={modules.filter((m) => m.project_id === projectId).map((m) => ({ id: m.id, name: m.name }))}
+          onConfirm={handleMappingConfirm}
+          onCancel={() => setMappingOpen(false)}
+        />
+      )}
 
       <Button variant="outline" size="sm" disabled={importing} onClick={() => fileRef.current?.click()}>
         <Upload className="mr-2 h-4 w-4" />
