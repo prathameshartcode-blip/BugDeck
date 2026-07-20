@@ -67,7 +67,7 @@ export const Header: React.FC = () => {
                 </span>
                 <span className="text-[10px] text-muted-foreground line-clamp-1 leading-snug">
                   {proj.description || "No description"}
-                </span>
+                </span> 
               </DropdownMenuItem>
             ))}
             <div className="border-t border-border/50 mt-1 pt-1">

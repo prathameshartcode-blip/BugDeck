@@ -27,19 +27,19 @@ export default function DashboardPage() {
   }, [selectedProject?.id, fetchRunTestData]);
 
   // ── Bug Board stats ──────────────────────────────────────────────────────
-  const totalBugs      = projects.reduce((acc, p) => acc + p.total_test_cases, 0);
-  const bugsClosed     = projects.reduce((acc, p) => acc + p.passed_count, 0);       // closed
-  const bugsReopened   = projects.reduce((acc, p) => acc + p.failed_count, 0);       // reopen
-  const bugsOpen       = projects.reduce((acc, p) => acc + (p.status_counts?.open || 0), 0);
-  const bugsWorking    = projects.reduce((acc, p) => acc + p.in_progress_count, 0);  // working
-  const bugsToDiscuss  = projects.reduce((acc, p) => acc + p.blocked_count, 0);      // todiscuss
+  const totalBugs      = selectedProject ? selectedProject.total_test_cases : projects.reduce((acc, p) => acc + p.total_test_cases, 0);
+  const bugsClosed     = selectedProject ? selectedProject.passed_count     : projects.reduce((acc, p) => acc + p.passed_count, 0);       // closed
+  const bugsReopened   = selectedProject ? selectedProject.failed_count     : projects.reduce((acc, p) => acc + p.failed_count, 0);       // reopen
+  const bugsOpen       = selectedProject ? (selectedProject.status_counts?.open || 0) : projects.reduce((acc, p) => acc + (p.status_counts?.open || 0), 0);
+  const bugsFixed      = selectedProject ? selectedProject.in_progress_count : projects.reduce((acc, p) => acc + p.in_progress_count, 0); // Fixed
+  const bugsToDiscuss  = selectedProject ? selectedProject.blocked_count    : projects.reduce((acc, p) => acc + p.blocked_count, 0);      // todiscuss
 
   const bugStatusData = [
     { name: "Closed",     value: bugsClosed,    color: "oklch(0.65 0.22 160)",   statusKey: "closed"    },
     { name: "Reopened",   value: bugsReopened,  color: "oklch(0.65 0.25 27.32)", statusKey: "reopen"    },
     { name: "To Discuss", value: bugsToDiscuss, color: "oklch(0.70 0.22 45)",    statusKey: "todiscuss" },
     { name: "Open",       value: bugsOpen,      color: "oklch(0.7 0.02 240)",    statusKey: "open"      },
-    { name: "Fixed",      value: bugsWorking,   color: "oklch(0.75 0.15 80)",    statusKey: "Fixed"     },
+    { name: "Fixed",      value: bugsFixed,     color: "oklch(0.685 0.148 237.3)", statusKey: "Fixed"   },
   ];
 
   // ── RunTest stats ────────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col gap-2 text-left border-b border-border/40 pb-6 mb-8 mt-2">
         <h1 className="text-3xl font-black tracking-tight text-foreground bg-clip-text">
-          Hello, {user?.full_name || "QA Engineer"}!
+          Hello
         </h1>
         <p className="text-sm text-muted-foreground font-medium">{currentDate}</p>
       </div>
@@ -129,7 +129,11 @@ export default function DashboardPage() {
           <TestStatusChart
             data={bugStatusData}
             title="Bug Board Status"
-            description="Distribution of bugs across all board columns."
+            description={
+              selectedProject
+                ? `Distribution of bugs across board columns for "${selectedProject.name}".`
+                : "Distribution of bugs across all board columns, all projects."
+            }
             projectId={selectedProject?.id}
             boardType="board"
           />

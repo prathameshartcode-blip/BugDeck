@@ -47,13 +47,15 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onDelete }) =
           <CardContent className="p-5 pt-0 mt-auto">
             <div className="space-y-3">
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Coverage</span>
-                <span className="font-semibold text-foreground">{project.coverage_percentage}%</span>
+                <span>Bugs Closed</span>
+                <span className="font-semibold text-foreground">
+                  {project.passed_count}/{project.total_test_cases} ({project.coverage_percentage}%)
+                </span>
               </div>
               <Progress value={project.coverage_percentage} className="h-1.5" />
               
               <div className="flex justify-between text-[10px] text-muted-foreground pt-1 border-t border-border/50">
-                <span>{project.total_test_cases} Test Cases</span>
+                <span>{project.total_test_cases} Bugs</span>
                 <span>{project.module_count} Modules</span>
               </div>
             </div>

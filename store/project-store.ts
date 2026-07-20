@@ -76,7 +76,7 @@ export const useProjectStore = create<ProjectState>()(
             const reopen = allCases.filter((tc: any) => tc.column_id === 'reopen').length;
             const open = allCases.filter((tc: any) => tc.column_id === 'open').length;
             const todiscuss = allCases.filter((tc: any) => tc.column_id === 'todiscuss').length;
-            const working = allCases.filter((tc: any) => tc.column_id === 'working').length;
+            const fixed = allCases.filter((tc: any) => tc.column_id === 'Fixed').length;
             const coverage = total > 0 ? Math.round((closed / total) * 100) : 0;
 
             const projectStats: ProjectWithStats = {
@@ -87,12 +87,12 @@ export const useProjectStore = create<ProjectState>()(
               failed_count: reopen,
               backlog_count: open,
               blocked_count: todiscuss,
-              in_progress_count: working,
+              in_progress_count: fixed,
               coverage_percentage: coverage,
               module_count: moduleCount || 0,
               status_counts: {
                 open,
-                working,
+                Fixed: fixed,
                 reopen,
                 todiscuss,
                 closed,
@@ -167,12 +167,11 @@ export const useProjectStore = create<ProjectState>()(
             coverage_percentage: 0,
             module_count: 0,
             status_counts: {
-              backlog: 0,
-              to_test: 0,
-              in_progress: 0,
-              passed: 0,
-              failed: 0,
-              blocked: 0,
+              open: 0,
+              Fixed: 0,
+              reopen: 0,
+              todiscuss: 0,
+              closed: 0,
             },
             type_counts: {
               functional: 0,
@@ -282,4 +281,3 @@ export const useProjectStore = create<ProjectState>()(
     }
   )
 );
-
