@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { useRunTestStore } from "@/store/runtest-store";
 import { useAuthStore } from "@/store/auth-store";
-import { ModuleMappingDialog } from "@/components/ui/module-mapping-dialog";
+import { ModuleMappingDialog, SKIP_MODULE } from "@/components/ui/module-mapping-dialog";
 
 const EXPECTED_COLUMNS = [
   { name: "Title", required: false },
@@ -305,11 +305,24 @@ export function RunTestImportButton({ projectId, onImported }: RunTestImportButt
   // ── Module mapping confirmed ─────────────────────────────────
   const handleMappingConfirm = async (userMapping: Record<string, string>) => {
     setMappingOpen(false);
+
+    const skipNames = new Set<string>();
     const merged: Record<string, string> = { ...pendingExactMap };
-    for (const [csvName, moduleId] of Object.entries(userMapping)) {
-      if (moduleId) merged[csvName.toLowerCase()] = moduleId;
+
+    for (const [csvName, value] of Object.entries(userMapping)) {
+      if (value === SKIP_MODULE) {
+        skipNames.add(csvName.toLowerCase());
+      } else if (value) {
+        merged[csvName.toLowerCase()] = value;
+      }
     }
-    await doInsert(pendingRows, merged, pendingUnmatchedColumns);
+
+    const filteredRows =
+      skipNames.size > 0
+        ? pendingRows.filter((r) => !skipNames.has(col(r, "Module").toLowerCase()))
+        : pendingRows;
+
+    await doInsert(filteredRows, merged, pendingUnmatchedColumns);
   };
 
   return (

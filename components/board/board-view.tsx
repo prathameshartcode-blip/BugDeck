@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { BoardColumn } from "./board-column";
 import { useBoardStore } from "@/store/board-store";
+import { useRunTestStore } from "@/store/runtest-store";
 import type { TestCase, TestCaseStatus, TestCasePriority } from "@/types/database";
 import { ImportButton } from "./import-button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -11,11 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Trash, Plus, Pencil, Check, X as XIcon, Sparkles, Bug } from "lucide-react";
+import { Trash, Plus, Pencil, Check, X as XIcon, Sparkles, Bug, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { GenerateBugsDialog } from "@/components/ai/generate-bugs-dialog";
+import { GenerateRegressionTestsDialog } from "@/components/ai/generate-regression-tests-dialog";
 
 interface BoardViewProps {
   projectId: string;
@@ -108,6 +110,7 @@ function InlineEdit({
 
 export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const { testCases, reorderTestCase, updateTestCase, deleteTestCase, deleteMultipleTestCases, moveMultipleTestCases, createTestCase, addModule, deleteModule, modules, fetchBoardData } = useBoardStore();
+  const { createRunTestCase } = useRunTestStore();
 
   useEffect(() => {
     if (projectId) fetchBoardData(projectId);
@@ -131,6 +134,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [bulkMoveStatus, setBulkMoveStatus] = useState<TestCaseStatus | "">("");
   const [isAIOpen, setIsAIOpen] = useState(false);
+  const [isRegressionOpen, setIsRegressionOpen] = useState(false);
 
   // Tracks live edits inside the detail dialog before saving
   const [editingCase, setEditingCase] = useState<Partial<TestCase>>({});
@@ -541,13 +545,25 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
                     ))}
                   </div>
                 </div>
-                <button
-                  onClick={handleDeleteTestCase}
-                  className="p-2 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                  title="Delete Test Case"
-                >
-                  <Trash className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-1.5">
+                  {selectedTestCase.status === "Fixed" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 h-8 border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-600 dark:text-emerald-400"
+                      onClick={() => setIsRegressionOpen(true)}
+                    >
+                      <ShieldCheck className="h-3.5 w-3.5" /> Generate Regression Test
+                    </Button>
+                  )}
+                  <button
+                    onClick={handleDeleteTestCase}
+                    className="p-2 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                    title="Delete Test Case"
+                  >
+                    <Trash className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Tabs */}
@@ -875,6 +891,36 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
           toast.success(`✨ ${count} AI-generated bug${count !== 1 ? "s" : ""} added to board!`);
         }}
       />
+
+      {/* ── AI Regression Test Generator Dialog ── */}
+      {selectedTestCase && (
+        <GenerateRegressionTestsDialog
+          open={isRegressionOpen}
+          onOpenChange={setIsRegressionOpen}
+          bug={selectedTestCase}
+          moduleName={modules.find((m) => m.id === selectedTestCase.module_id)?.name}
+          onImport={async (tests) => {
+            let count = 0;
+            for (const test of tests) {
+              await createRunTestCase({
+                title: test.title,
+                description: test.description || null,
+                priority: test.priority,
+                status: "open",
+                steps: test.steps.map((s, i) => ({ order: i + 1, action: s.action, expected: s.expected })),
+                expected_result: test.expected_result,
+                actual_result: null,
+                failed_reason: null,
+                screenshot_url: null,
+                module_id: test.module_id,
+                project_id: projectId,
+              });
+              count++;
+            }
+            toast.success(`🛡️ ${count} regression test${count !== 1 ? "s" : ""} added to RunTest!`);
+          }}
+        />
+      )}
     </div>
   );
-};
+};
