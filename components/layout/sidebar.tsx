@@ -79,7 +79,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
 
       <div className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
         {navigation.map((item) => {
-          const isBoard = item.name === "Test Cases";
+          const isBoard = item.name === "Bug Sheet";
           const isRunTest = item.name === "RunTest";
           const isActive =
             pathname === item.href ||

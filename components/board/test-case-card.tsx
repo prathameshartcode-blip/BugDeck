@@ -26,6 +26,13 @@ const priorityColorMap: Record<TestCasePriority, string> = {
   low: "bg-blue-500",
 };
 
+const priorityBorderMap: Record<TestCasePriority, string> = {
+  critical: "border-l-red-500",
+  high: "border-l-orange-500",
+  medium: "border-l-yellow-500",
+  low: "border-l-blue-500",
+};
+
 export const TestCaseCard: React.FC<TestCaseCardProps> = ({ testCase, onClick, onDragStart, onDragOver, onDrop, isSelected, onSelectToggle, isSelectionMode, moduleName }) => {
   return (
     <div
@@ -36,7 +43,10 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({ testCase, onClick, o
       onClick={() => onClick(testCase)}
       className="cursor-grab active:cursor-grabbing select-none"
     >
-      <Card className=" hover:border hover:border-gray-500 transition-all duration-100 bg-card border shadow-md  relative group">
+      <Card className={cn(
+        "hover:border-primary/40 transition-all duration-150 bg-card border border-l-3 shadow-sm hover:shadow-md relative group",
+        priorityBorderMap[testCase.priority]
+      )}>
         <CardContent className="p-4 space-y-3">
           {/* Header */}
           <div className="flex items-start justify-between gap-2">

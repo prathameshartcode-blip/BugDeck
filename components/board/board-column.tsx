@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { TestCaseCard } from "./test-case-card";
 import type { TestCase, TestCaseStatus, Module } from "@/types/database";
 import { cn } from "@/lib/utils";
+import { Inbox, PartyPopper } from "lucide-react";
 
 interface BoardColumnProps {
   id: TestCaseStatus;
@@ -121,8 +122,19 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
       {/* Cards list */}
       <div className="flex-1 overflow-y-auto space-y-2.5 max-h-[600px] pr-0.5 scrollbar-thin">
         {testCases.length === 0 ? (
-          <div className="flex h-36 items-center justify-center border border-dashed border-border/40 rounded-lg text-[10px] text-muted-foreground select-none pointer-events-none">
-            No test cases here
+          <div className="flex flex-col h-36 items-center justify-center gap-2 border border-dashed border-border/40 rounded-lg text-center px-3 select-none pointer-events-none">
+            {id === "closed" ? (
+              <PartyPopper className="h-4 w-4 text-muted-foreground/50" />
+            ) : (
+              <Inbox className="h-4 w-4 text-muted-foreground/50" />
+            )}
+            <p className="text-[10px] text-muted-foreground leading-snug">
+              {id === "open"
+                ? "Nothing open right now — drag a card here or add a new bug."
+                : id === "closed"
+                ? "Nothing closed yet."
+                : "No bugs in this column."}
+            </p>
           </div>
         ) : (
           testCases.map((tc) => {

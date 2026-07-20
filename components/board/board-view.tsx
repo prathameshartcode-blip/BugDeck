@@ -12,12 +12,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Trash, Plus, Pencil, Check, X as XIcon, Sparkles, Bug, ShieldCheck } from "lucide-react";
+import { Trash, Plus, Pencil, Check, X as XIcon, Sparkles, Bug, ShieldCheck, MoreHorizontal, Download, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { GenerateBugsDialog } from "@/components/ai/generate-bugs-dialog";
 import { GenerateRegressionTestsDialog } from "@/components/ai/generate-regression-tests-dialog";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 interface BoardViewProps {
   projectId: string;
@@ -32,6 +33,19 @@ const COLUMNS: Array<{ id: TestCaseStatus; title: string; color: string }> = [
 ];
 
 const PRIORITIES: TestCasePriority[] = ["critical", "high", "medium", "low"];
+
+// The "happy path" pipeline shown as a connected stepper in the detail dialog
+const MAIN_FLOW: Array<{ id: TestCaseStatus; label: string }> = [
+  { id: "open", label: "Open" },
+  { id: "Fixed", label: "Fixed" },
+  { id: "closed", label: "Closed" },
+];
+
+// Exception statuses — branches off the happy path, shown separately
+const BRANCH_FLOW: Array<{ id: TestCaseStatus; label: string }> = [
+  { id: "reopen", label: "Reopen" },
+  { id: "todiscuss", label: "To Discuss" },
+];
 
 // Inline editable text field — shows value as text, click pencil to edit, save on blur/Enter
 function InlineEdit({
@@ -135,6 +149,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const [bulkMoveStatus, setBulkMoveStatus] = useState<TestCaseStatus | "">("");
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [isRegressionOpen, setIsRegressionOpen] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
 
   // Tracks live edits inside the detail dialog before saving
   const [editingCase, setEditingCase] = useState<Partial<TestCase>>({});
@@ -339,12 +354,26 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
             Showing <span className="text-foreground font-bold">{filteredCases.length}</span> of {projectCases.length} bugs
           </div>
           <ImportButton projectId={projectId} onImported={() => fetchBoardData(projectId)} />
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => window.open(getExportUrl(), "_blank")}>
-            Export CSV
-          </Button>
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsModulesOpen(true)}>
-            Modules
-          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger onClick={() => setIsMoreMenuOpen((v) => !v)}>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <MoreHorizontal className="h-4 w-4" /> More
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent open={isMoreMenuOpen} onClose={() => setIsMoreMenuOpen(false)} align="right" className="min-w-[170px]">
+              <DropdownMenuItem
+                onClick={() => { setIsMoreMenuOpen(false); window.open(getExportUrl(), "_blank"); }}
+              >
+                <Download className="mr-2 h-3.5 w-3.5" /> Export CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => { setIsMoreMenuOpen(false); setIsModulesOpen(true); }}
+              >
+                <Layers className="mr-2 h-3.5 w-3.5" /> Manage Modules
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Bulk Actions Area */}
           {!isSelectionMode ? (
@@ -521,48 +550,95 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
                 </div>
               </DialogHeader>
 
-              {/* Status Switcher & Delete */}
-              <div className="flex flex-wrap items-center justify-between gap-3 p-3 my-2 bg-muted/40 border border-border/60 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-muted-foreground">Status:</span>
-                  <div className="flex gap-1">
-                    {(["open", "Fixed", "closed", "reopen", "todiscuss"] as TestCaseStatus[]).map((st) => (
+              {/* Status Pipeline & Actions */}
+              <div className="flex flex-col gap-3 p-3 my-2 bg-muted/40 border border-border/60 rounded-lg">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-semibold text-muted-foreground">Status</span>
+                  <div className="flex items-center gap-1.5">
+                    {selectedTestCase.status === "Fixed" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 h-8 border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-600 dark:text-emerald-400"
+                        onClick={() => setIsRegressionOpen(true)}
+                      >
+                        <ShieldCheck className="h-3.5 w-3.5" /> Generate Regression Test
+                      </Button>
+                    )}
+                    <button
+                      onClick={handleDeleteTestCase}
+                      className="p-2 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      title="Delete Test Case"
+                    >
+                      <Trash className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Main pipeline: Open → Fixed → Closed */}
+                <div className="flex items-center">
+                  {MAIN_FLOW.map((step, i) => {
+                    const mainIndex = MAIN_FLOW.findIndex((s) => s.id === selectedTestCase.status);
+                    const isActive = selectedTestCase.status === step.id;
+                    const isPast = mainIndex !== -1 && mainIndex > i;
+                    return (
+                      <React.Fragment key={step.id}>
+                        <button
+                          onClick={() => handleUpdateStatus(step.id)}
+                          className="flex items-center gap-1.5 shrink-0 group/step"
+                          title={`Move to ${step.label}`}
+                        >
+                          <span
+                            className={cn(
+                              "h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 border transition-colors",
+                              isActive
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : isPast
+                                ? "bg-primary/15 text-primary border-primary/40"
+                                : "bg-background text-muted-foreground border-border group-hover/step:border-primary/50"
+                            )}
+                          >
+                            {isPast ? <Check className="h-3 w-3" /> : i + 1}
+                          </span>
+                          <span
+                            className={cn(
+                              "text-[11px] font-semibold transition-colors",
+                              isActive ? "text-primary" : isPast ? "text-foreground" : "text-muted-foreground group-hover/step:text-foreground"
+                            )}
+                          >
+                            {step.label}
+                          </span>
+                        </button>
+                        {i < MAIN_FLOW.length - 1 && (
+                          <div className={cn("h-px flex-1 mx-2 transition-colors", isPast ? "bg-primary/40" : "bg-border")} />
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+
+                {/* Branch statuses — exceptions to the happy path */}
+                <div className="flex items-center gap-2 pt-1 border-t border-border/50">
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wide shrink-0">Flag as</span>
+                  {BRANCH_FLOW.map((branch) => {
+                    const isActive = selectedTestCase.status === branch.id;
+                    return (
                       <button
-                        key={st}
-                        onClick={() => handleUpdateStatus(st)}
+                        key={branch.id}
+                        onClick={() => handleUpdateStatus(branch.id)}
                         className={cn(
-                          "px-2.5 py-1 rounded-md text-[10px] font-bold capitalize transition-colors border",
-                          selectedTestCase.status === st
-                            ? st === "closed"    ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30 dark:text-emerald-400"
-                            : st === "todiscuss" ? "bg-red-500/10 text-red-600 border-red-500/30"
-                            : st === "reopen"    ? "bg-amber-500/10 text-amber-600 border-amber-500/30"
-                                                 : "bg-primary/10 text-primary border-primary/30"
+                          "px-2.5 py-1 rounded-md text-[10px] font-bold transition-colors border",
+                          isActive
+                            ? branch.id === "todiscuss"
+                              ? "bg-red-500/10 text-red-600 border-red-500/30"
+                              : "bg-amber-500/10 text-amber-600 border-amber-500/30"
                             : "bg-background border-border text-muted-foreground hover:bg-accent"
                         )}
                       >
-                        {st.replace("_", " ")}
+                        {branch.label}
                       </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {selectedTestCase.status === "Fixed" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1.5 h-8 border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-600 dark:text-emerald-400"
-                      onClick={() => setIsRegressionOpen(true)}
-                    >
-                      <ShieldCheck className="h-3.5 w-3.5" /> Generate Regression Test
-                    </Button>
-                  )}
-                  <button
-                    onClick={handleDeleteTestCase}
-                    className="p-2 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                    title="Delete Test Case"
-                  >
-                    <Trash className="h-4 w-4" />
-                  </button>
+                    );
+                  })}
                 </div>
               </div>
 
