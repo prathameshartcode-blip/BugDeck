@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Trash, Plus, Pencil, Check, X as XIcon, Sparkles, Bug, ShieldCheck, MoreHorizontal, Download, Layers } from "lucide-react";
+import { Trash, Plus, Pencil, Check, X as XIcon, Sparkles, Bug, ShieldCheck, MoreHorizontal, Download, Layers, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { MultiSelect } from "@/components/ui/multi-select";
@@ -166,6 +166,11 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
   const [moduleFilter,   setModuleFilter]   = useState<string[]>([]);
   const [statusFilter,   setStatusFilter]   = useState<string[]>([]);
+  const [textSearchFilter, setTextSearchFilter] = useState("");
+
+  // AI natural-language search
+  const [aiSearchInput, setAiSearchInput] = useState("");
+  const [aiSearchLoading, setAiSearchLoading] = useState(false);
 
   // Pre-fill status filter from URL ?status= param (e.g. coming from dashboard chart click)
   const searchParams = useSearchParams();
@@ -181,8 +186,130 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
     const matchesPriority = priorityFilter.length === 0 || priorityFilter.includes(tc.priority);
     const matchesModule   = moduleFilter.length === 0 || moduleFilter.includes(tc.module_id);
     const matchesStatus   = statusFilter.length === 0 || statusFilter.includes(tc.status);
-    return matchesPriority && matchesModule && matchesStatus;
+    const matchesText     =
+      textSearchFilter.trim() === "" ||
+      tc.title.toLowerCase().includes(textSearchFilter.trim().toLowerCase()) ||
+      (tc.description || "").toLowerCase().includes(textSearchFilter.trim().toLowerCase());
+    return matchesPriority && matchesModule && matchesStatus && matchesText;
   });
+
+  // Best-effort match of an AI-returned module name to a real module id for this project
+  const matchModuleNameToId = (name: string): string | null => {
+    const projectModules = modules.filter((m) => m.project_id === projectId);
+    const exact = projectModules.find((m) => m.name.toLowerCase() === name.toLowerCase());
+    if (exact) return exact.id;
+    const partial = projectModules.find(
+      (m) => m.name.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(m.name.toLowerCase())
+    );
+    return partial?.id ?? null;
+  };
+
+  // Converts an AI-classified relative time token into concrete ISO date boundaries.
+  // The AI only ever classifies WHICH bucket applies — actual date math happens here,
+  // so we're never relying on the model to know "today's" real date.
+  const getDateRangeBounds = (token: string | null): { from: string | null; to: string | null } => {
+    if (!token) return { from: null, to: null };
+    const now = new Date();
+    const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+    const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+
+    switch (token) {
+      case "today":
+        return { from: startOfDay(now).toISOString(), to: endOfDay(now).toISOString() };
+      case "yesterday": {
+        const y = new Date(now);
+        y.setDate(y.getDate() - 1);
+        return { from: startOfDay(y).toISOString(), to: endOfDay(y).toISOString() };
+      }
+      case "this_week": {
+        const start = new Date(now);
+        const day = start.getDay();
+        const diffToMonday = day === 0 ? 6 : day - 1;
+        start.setDate(start.getDate() - diffToMonday);
+        return { from: startOfDay(start).toISOString(), to: endOfDay(now).toISOString() };
+      }
+      case "last_7_days": {
+        const start = new Date(now);
+        start.setDate(start.getDate() - 7);
+        return { from: startOfDay(start).toISOString(), to: endOfDay(now).toISOString() };
+      }
+      case "this_month": {
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        return { from: startOfDay(start).toISOString(), to: endOfDay(now).toISOString() };
+      }
+      case "last_30_days": {
+        const start = new Date(now);
+        start.setDate(start.getDate() - 30);
+        return { from: startOfDay(start).toISOString(), to: endOfDay(now).toISOString() };
+      }
+      default:
+        return { from: null, to: null };
+    }
+  };
+
+  const handleAiSearch = async () => {
+    if (!aiSearchInput.trim()) return;
+    setAiSearchLoading(true);
+    try {
+      const moduleNames = modules.filter((m) => m.project_id === projectId).map((m) => m.name);
+      const res = await fetch("/api/ai/parse-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: aiSearchInput, moduleNames }),
+      });
+      const parsed = await res.json();
+      if (!res.ok) throw new Error(parsed.error ?? "Search parsing failed");
+
+      const moduleIds = (parsed.modules as string[])
+        .map(matchModuleNameToId)
+        .filter((id): id is string => id !== null);
+
+      // Always apply the filters to the board view, export or not — so it's visible
+      // exactly which bugs matched, not just a silent background download.
+      setModuleFilter(moduleIds);
+      setPriorityFilter(parsed.priorities ?? []);
+      setStatusFilter(parsed.statuses ?? []);
+      setTextSearchFilter(parsed.textSearch ?? "");
+
+      const unsupportedNote =
+        parsed.unsupported && parsed.unsupported.length > 0
+          ? ` (couldn't apply: ${parsed.unsupported.join(", ")})`
+          : "";
+
+      if (parsed.action === "export") {
+        const dateBounds = getDateRangeBounds(parsed.dateRange);
+        // Build the export URL directly from the just-parsed values (not from
+        // moduleFilter/priorityFilter/etc. state, since those setters above are
+        // async and won't be current yet on this render pass).
+        const params = new URLSearchParams();
+        params.append("projectId", projectId);
+        if ((parsed.priorities ?? []).length > 0) params.append("priority", parsed.priorities.join(","));
+        if (moduleIds.length > 0) params.append("module", moduleIds.join(","));
+        if ((parsed.statuses ?? []).length > 0) params.append("status", parsed.statuses.join(","));
+        if (dateBounds.from) params.append("dateFrom", dateBounds.from);
+        if (dateBounds.to) params.append("dateTo", dateBounds.to);
+        if (parsed.textSearch) params.append("text", parsed.textSearch);
+        window.open(`/api/testcases/export?${params.toString()}`, "_blank");
+        toast.success(`Exporting matching bugs...${unsupportedNote}`);
+      } else if (unsupportedNote) {
+        toast.info(`Applied filters${unsupportedNote}`);
+      } else {
+        toast.success("Filters applied");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't parse that search");
+    } finally {
+      setAiSearchLoading(false);
+    }
+  };
+
+  const clearAllFilters = () => {
+    setModuleFilter([]);
+    setPriorityFilter([]);
+    setStatusFilter([]);
+    setTextSearchFilter("");
+    setAiSearchInput("");
+  };
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
     e.dataTransfer.setData("text/plain", id);
@@ -300,20 +427,52 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
     toast.success("Test case created successfully");
   };
 
-  const getExportUrl = (ids?: string[]) => {
+  const getExportUrl = (ids?: string[], dateBounds?: { from: string | null; to: string | null }, text?: string) => {
     const params = new URLSearchParams();
     params.append("projectId", projectId);
     if (priorityFilter.length > 0) params.append("priority", priorityFilter.join(","));
     if (moduleFilter.length > 0)   params.append("module",   moduleFilter.join(","));
     if (statusFilter.length > 0)   params.append("status",   statusFilter.join(","));
     if (ids && ids.length > 0)    params.append("ids",      ids.join(","));
+    if (dateBounds?.from)          params.append("dateFrom", dateBounds.from);
+    if (dateBounds?.to)            params.append("dateTo",   dateBounds.to);
+    if (text && text.trim())       params.append("text",     text.trim());
     return `/api/testcases/export?${params.toString()}`;
   };
 
   return (
     <div className="space-y-6">
       {/* Board Controls / Filters */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl border border-border/50 bg-card/60 backdrop-blur-md shadow-sm select-none relative z-20">
+      <div className="flex flex-col gap-3 p-4 rounded-xl border border-border/50 bg-card/60 backdrop-blur-md shadow-sm select-none relative z-20">
+        {/* AI Natural-Language Search */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 max-w-lg">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <input
+              value={aiSearchInput}
+              onChange={(e) => setAiSearchInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleAiSearch(); }}
+              placeholder='Try "critical bugs in Auth" or "everything reopened"'
+              className="w-full h-9 pl-9 pr-3 rounded-lg border border-border bg-background text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+            />
+          </div>
+          <Button
+            size="sm"
+            onClick={handleAiSearch}
+            disabled={aiSearchLoading || !aiSearchInput.trim()}
+            className="gap-1.5 h-9"
+          >
+            {aiSearchLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            Search
+          </Button>
+          {(moduleFilter.length > 0 || priorityFilter.length > 0 || statusFilter.length > 0 || textSearchFilter) && (
+            <Button size="sm" variant="ghost" onClick={clearAllFilters} className="gap-1 h-9 text-muted-foreground">
+              <XIcon className="h-3.5 w-3.5" /> Clear
+            </Button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex flex-col gap-1">
             <span className="text-[10px] font-bold text-muted-foreground uppercase">Module</span>
@@ -439,6 +598,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
           <Button onClick={() => setIsCreateOpen(true)} size="sm" className="gap-2">
             <Plus className="h-4 w-4" /> New Bug
           </Button>
+        </div>
         </div>
       </div>
 

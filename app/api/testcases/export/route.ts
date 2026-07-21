@@ -20,6 +20,8 @@ export async function GET(req: NextRequest) {
   const moduleFilter   = req.nextUrl.searchParams.get('module');
   const statusFilter   = req.nextUrl.searchParams.get('status');
   const idsParam       = req.nextUrl.searchParams.get('ids');
+  const dateFrom       = req.nextUrl.searchParams.get('dateFrom');
+  const dateTo         = req.nextUrl.searchParams.get('dateTo');
 
   let query = supabase
     .from('cards')
@@ -44,6 +46,14 @@ export async function GET(req: NextRequest) {
     if (idsArray.length > 0) {
       query = query.in('id', idsArray);
     }
+  }
+  if (dateFrom) query = query.gte('created_at', dateFrom);
+  if (dateTo)   query = query.lte('created_at', dateTo);
+
+  const textParam = req.nextUrl.searchParams.get('text');
+  if (textParam && textParam.trim()) {
+    const escaped = textParam.trim().replace(/[%_]/g, '\\$&');
+    query = query.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%`);
   }
 
   const { data: testCases, error } = await query;
