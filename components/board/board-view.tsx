@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { GenerateBugsDialog } from "@/components/ai/generate-bugs-dialog";
 import { GenerateRegressionTestsDialog } from "@/components/ai/generate-regression-tests-dialog";
+import { BugSummaryDialog, type BugSummaryStats } from "@/components/ai/bug-summary-dialog";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 interface BoardViewProps {
@@ -172,6 +173,13 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const [aiSearchInput, setAiSearchInput] = useState("");
   const [aiSearchLoading, setAiSearchLoading] = useState(false);
 
+  // AI bug summary popup
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryStats, setSummaryStats] = useState<BugSummaryStats | null>(null);
+  const [summaryHeadline, setSummaryHeadline] = useState<string | null>(null);
+  const [summaryInsights, setSummaryInsights] = useState<string[]>([]);
+
   // Pre-fill status filter from URL ?status= param (e.g. coming from dashboard chart click)
   const searchParams = useSearchParams();
   useEffect(() => {
@@ -247,6 +255,41 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
     }
   };
 
+  // Filters projectCases directly from just-parsed AI output (not from filter state,
+  // since state setters are async and won't be current on this render pass).
+  const getMatchingCasesForParsed = (
+    parsed: { priorities?: string[]; statuses?: string[]; textSearch?: string | null },
+    dateBounds: { from: string | null; to: string | null },
+    moduleIds: string[]
+  ): TestCase[] => {
+    const priorities = parsed.priorities ?? [];
+    const statuses = parsed.statuses ?? [];
+    const text = (parsed.textSearch ?? "").trim().toLowerCase();
+    return projectCases.filter((tc) => {
+      const matchesPriority = priorities.length === 0 || priorities.includes(tc.priority);
+      const matchesModule = moduleIds.length === 0 || moduleIds.includes(tc.module_id);
+      const matchesStatus = statuses.length === 0 || statuses.includes(tc.status);
+      const matchesText = !text || tc.title.toLowerCase().includes(text) || (tc.description || "").toLowerCase().includes(text);
+      const matchesDate = (!dateBounds.from || tc.created_at >= dateBounds.from) && (!dateBounds.to || tc.created_at <= dateBounds.to);
+      return matchesPriority && matchesModule && matchesStatus && matchesText && matchesDate;
+    });
+  };
+
+  // Code-computed stats — this is the source of truth for counts shown in the summary
+  // popup. The AI only ever narrates on top of these, never recalculates them.
+  const computeSummaryStats = (cases: TestCase[]): BugSummaryStats => {
+    const byStatus: Record<string, number> = {};
+    const byPriority: Record<string, number> = {};
+    const byModule: Record<string, number> = {};
+    for (const tc of cases) {
+      byStatus[tc.status] = (byStatus[tc.status] || 0) + 1;
+      byPriority[tc.priority] = (byPriority[tc.priority] || 0) + 1;
+      const modName = modules.find((m) => m.id === tc.module_id)?.name || "Unassigned";
+      byModule[modName] = (byModule[modName] || 0) + 1;
+    }
+    return { total: cases.length, byStatus, byPriority, byModule };
+  };
+
   const handleAiSearch = async () => {
     if (!aiSearchInput.trim()) return;
     setAiSearchLoading(true);
@@ -291,6 +334,42 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
         if (parsed.textSearch) params.append("text", parsed.textSearch);
         window.open(`/api/testcases/export?${params.toString()}`, "_blank");
         toast.success(`Exporting matching bugs...${unsupportedNote}`);
+      } else if (parsed.action === "summarize") {
+        const dateBounds = getDateRangeBounds(parsed.dateRange);
+        const matches = getMatchingCasesForParsed(parsed, dateBounds, moduleIds);
+        const stats = computeSummaryStats(matches);
+
+        setSummaryStats(stats);
+        setSummaryHeadline(null);
+        setSummaryInsights([]);
+        setIsSummaryOpen(true);
+        setSummaryLoading(true);
+
+        try {
+          const sumRes = await fetch("/api/ai/summarize-bugs", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              originalQuery: aiSearchInput,
+              stats,
+              bugs: matches.map((tc) => ({
+                title: tc.title,
+                description: tc.description,
+                priority: tc.priority,
+                status: tc.status,
+                moduleName: modules.find((m) => m.id === tc.module_id)?.name || "Unassigned",
+              })),
+            }),
+          });
+          const sumJson = await sumRes.json();
+          if (!sumRes.ok) throw new Error(sumJson.error ?? "Summary generation failed");
+          setSummaryHeadline(sumJson.headline);
+          setSummaryInsights(sumJson.insights ?? []);
+        } catch (err) {
+          setSummaryHeadline(err instanceof Error ? err.message : "Couldn't generate summary.");
+        } finally {
+          setSummaryLoading(false);
+        }
       } else if (unsupportedNote) {
         toast.info(`Applied filters${unsupportedNote}`);
       } else {
@@ -1157,6 +1236,17 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
           }}
         />
       )}
+
+      {/* ── AI Bug Summary Popup ── */}
+      <BugSummaryDialog
+        open={isSummaryOpen}
+        onOpenChange={setIsSummaryOpen}
+        query={aiSearchInput}
+        loading={summaryLoading}
+        stats={summaryStats}
+        headline={summaryHeadline}
+        insights={summaryInsights}
+      />
     </div>
   );
 };

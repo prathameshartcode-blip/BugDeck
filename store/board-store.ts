@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
-import type { TestCase, Module } from "@/types/database";
+import type { TestCase, Module, StatusHistory } from "@/types/database";
 import { useProjectStore } from "./project-store";
 import { useAuthStore } from "./auth-store";
 
@@ -37,6 +37,36 @@ const SEED_MODULES = [
   { name: "Authentication", description: "Login, Signup, JWT refresh logic" },
  
 ];
+
+// Logs a status transition to status_history. Fire-and-forget by design — a logging
+// failure should never block or roll back the actual status change the user just made.
+async function logStatusHistory(cardId: string, projectId: string, fromStatus: string | null, toStatus: string) {
+  if (fromStatus === toStatus) return; // no real transition happened
+  try {
+    const { error } = await supabase.from("status_history").insert({
+      card_id: cardId,
+      project_id: projectId,
+      from_status: fromStatus,
+      to_status: toStatus,
+    });
+    if (error) console.error("Failed to log status history:", error);
+  } catch (err) {
+    console.error("Failed to log status history:", err);
+  }
+}
+
+async function logStatusHistoryBatch(
+  rows: { card_id: string; project_id: string; from_status: string | null; to_status: string }[]
+) {
+  const realTransitions = rows.filter((r) => r.from_status !== r.to_status);
+  if (realTransitions.length === 0) return;
+  try {
+    const { error } = await supabase.from("status_history").insert(realTransitions);
+    if (error) console.error("Failed to log status history batch:", error);
+  } catch (err) {
+    console.error("Failed to log status history batch:", err);
+  }
+}
 
 export const useBoardStore = create<BoardState>()((set, get) => ({
   testCases: [],
@@ -172,6 +202,10 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
 
   updateTestCase: async (id, updates) => {
     try {
+      // Capture the pre-change status so we can log the transition, if any.
+      const beforeTc = get().testCases.find((c) => c.id === id);
+      const fromStatus = beforeTc?.status ?? null;
+
       // Map local to db keys
       const dbUpdates: any = { ...updates };
       if (updates.status) {
@@ -196,6 +230,9 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
       const tc = get().testCases.find((c) => c.id === id);
       if (tc) {
         get()._syncProjectStats(tc.project_id);
+        if (updates.status) {
+          logStatusHistory(tc.id, tc.project_id, fromStatus, updates.status);
+        }
       }
     } catch (err: any) {
       set({ error: err.message || 'Failed to update test case' });
@@ -208,6 +245,11 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
   },
 
   reorderTestCase: async (activeId, newStatus, overId) => {
+    // Capture pre-change status BEFORE the optimistic local mutation below overwrites it.
+    const beforeTc = get().testCases.find((tc) => tc.id === activeId);
+    const fromStatus = beforeTc?.status ?? null;
+    const projectIdForLog = beforeTc?.project_id;
+
     // For visual reordering, we immediately update local state, then let supabase handle the status change
     set((state) => {
       const list = [...state.testCases];
@@ -243,6 +285,9 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
     const tc = get().testCases.find((c) => c.id === activeId);
     if (tc) {
       get()._syncProjectStats(tc.project_id);
+      if (projectIdForLog) {
+        logStatusHistory(activeId, projectIdForLog, fromStatus, newStatus);
+      }
     }
   },
 
@@ -305,6 +350,9 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
       const tc = get().testCases.find((c) => ids.includes(c.id));
       const projectId = tc?.project_id;
 
+      // Capture each card's pre-change status for history logging, before the bulk update.
+      const beforeCases = get().testCases.filter((c) => ids.includes(c.id));
+
       const { error } = await supabase
         .from('cards')
         .update({ column_id: newStatus, updated_at: new Date().toISOString() })
@@ -321,6 +369,15 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
       if (projectId) {
         get()._syncProjectStats(projectId);
       }
+
+      logStatusHistoryBatch(
+        beforeCases.map((c) => ({
+          card_id: c.id,
+          project_id: c.project_id,
+          from_status: c.status,
+          to_status: newStatus,
+        }))
+      );
     } catch (err: any) {
       set({ error: err.message || 'Failed to move multiple test cases' });
       console.error(err);

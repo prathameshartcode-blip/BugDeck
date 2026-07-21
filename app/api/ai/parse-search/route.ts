@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { callGroqText } from "@/lib/groq";
 
 export interface ParsedSearchFilters {
-  action: "filter" | "export";
+  action: "filter" | "export" | "summarize";
   modules: string[];
   priorities: ("critical" | "high" | "medium" | "low")[];
   statuses: ("open" | "Fixed" | "reopen" | "todiscuss" | "closed")[];
@@ -12,12 +12,15 @@ export interface ParsedSearchFilters {
 }
 
 const SYSTEM_PROMPT = `You are a search-query interpreter for a bug tracking board. Convert the user's natural
-language query into a structured filter/export object matching the board's existing filter state.
+language query into a structured filter/export/summarize object matching the board's existing filter state.
 
 ACTION:
-- "action" is "export" if the user is clearly asking to export, download, or generate a CSV/file
-  of bugs (e.g. "export the reopened bugs", "download today's bugs", "give me a csv of...").
-- "action" is "filter" for everything else — the default, ordinary act of narrowing the board view.
+- "export" if the user is clearly asking to export, download, or generate a CSV/file of bugs
+  (e.g. "export the reopened bugs", "download today's bugs", "give me a csv of...").
+- "summarize" if the user is asking for an overview, report, or summary of bugs rather than just
+  narrowing the board view or downloading a file (e.g. "summary of bugs I added today", "what
+  are the new bugs and what's the issue", "give me a rundown of critical bugs in Auth").
+- "filter" for everything else — the default, ordinary act of narrowing the board view.
 
 AVAILABLE FILTERS:
 - modules: array of module names (must match one of the provided MODULE LIST exactly — 
@@ -44,7 +47,7 @@ RULES:
 
 OUTPUT FORMAT:
 {
-  "action": "filter" | "export",
+  "action": "filter" | "export" | "summarize",
   "modules": string[],
   "priorities": ("critical"|"high"|"medium"|"low")[],
   "statuses": ("open"|"Fixed"|"reopen"|"todiscuss"|"closed")[],
@@ -73,7 +76,7 @@ export async function POST(req: NextRequest) {
 
     // Defensive defaults in case the model omits a key
     const result: ParsedSearchFilters = {
-      action: parsed?.action === "export" ? "export" : "filter",
+      action: parsed?.action === "export" ? "export" : parsed?.action === "summarize" ? "summarize" : "filter",
       modules: Array.isArray(parsed?.modules) ? parsed.modules : [],
       priorities: Array.isArray(parsed?.priorities) ? parsed.priorities : [],
       statuses: Array.isArray(parsed?.statuses) ? parsed.statuses : [],

@@ -46,6 +46,18 @@ export type Module = {
   created_at: string;
 };
 
+/** A single status transition a bug went through — the log that makes "closed today",
+ *  "reopened 3 times", etc. answerable, since `cards` only ever holds the current status. */
+export type StatusHistory = {
+  id: string;
+  card_id: string;
+  project_id: string;
+  from_status: TestCaseStatus | null;
+  to_status: TestCaseStatus;
+  changed_at: string;
+};
+
+
 /** Priority levels for test cases and defects. */
 export type TestCasePriority = "critical" | "high" | "medium" | "low";
 
