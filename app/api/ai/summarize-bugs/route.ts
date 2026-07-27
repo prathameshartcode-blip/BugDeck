@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       stats.total === 0 ? "(no bugs matched)" : bugsText,
     ].join("\n");
 
-    const result = await callGroqText<BugSummaryResult>(SYSTEM_PROMPT, userPrompt);
+    const result = await callGroqText<BugSummaryResult>(SYSTEM_PROMPT, userPrompt, 600);
 
     return NextResponse.json({
       headline: result?.headline ?? "Summary unavailable.",

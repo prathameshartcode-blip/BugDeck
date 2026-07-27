@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
 
     const userPrompt = `MODULE LIST: ${moduleNames.join(", ") || "(no modules yet)"}\n\nQuery: "${query.trim()}"`;
 
-    const parsed = await callGroqText<ParsedSearchFilters>(SYSTEM_PROMPT, userPrompt);
+    const parsed = await callGroqText<ParsedSearchFilters>(SYSTEM_PROMPT, userPrompt, 300);
 
     // Defensive defaults in case the model omits a key
     const result: ParsedSearchFilters = {

@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
       .filter(Boolean)
       .join("\n");
 
-    const tests = await callGroqText<AIRegressionTest[]>(finalSystemPrompt, userPrompt);
+    const tests = await callGroqText<AIRegressionTest[]>(finalSystemPrompt, userPrompt, 1024);
 
     if (!Array.isArray(tests)) {
       throw new Error("AI returned an unexpected format.");

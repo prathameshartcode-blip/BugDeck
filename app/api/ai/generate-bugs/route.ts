@@ -89,7 +89,8 @@ export async function POST(req: NextRequest) {
     const bugs = await callGroq<AIBug[]>(
       finalSystemPrompt,
       userPrompt,
-      images
+      images,
+      2048
     );
 
     if (!Array.isArray(bugs)) {

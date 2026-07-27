@@ -87,7 +87,8 @@ export async function POST(req: NextRequest) {
     const testCases = await callGroq<AITestCase[]>(
       finalSystemPrompt,
       userPrompt,
-      images
+      images,
+      2048
     );
 
     if (!Array.isArray(testCases)) {
