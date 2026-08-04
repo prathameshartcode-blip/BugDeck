@@ -151,6 +151,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
                 onSelectToggle={onSelectToggle}
                 isSelectionMode={isSelectionMode}
                 moduleName={modName}
+                onMoveStatus={onDropTestCase}
               />
             );
           })

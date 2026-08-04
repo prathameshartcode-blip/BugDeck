@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Trash, Plus, Pencil, Check, X as XIcon, Sparkles, Bug, ShieldCheck, MoreHorizontal, Download, Layers, Search, Loader2 } from "lucide-react";
+import { Trash, Plus, Pencil, Check, X as XIcon, Sparkles, Bug, ShieldCheck, MoreHorizontal, Download, Layers, Search, Loader2, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { MultiSelect } from "@/components/ui/multi-select";
@@ -334,6 +334,53 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
         if (parsed.textSearch) params.append("text", parsed.textSearch);
         window.open(`/api/testcases/export?${params.toString()}`, "_blank");
         toast.success(`Exporting matching bugs...${unsupportedNote}`);
+      } else if (parsed.action === "copy") {
+        const dateBounds = getDateRangeBounds(parsed.dateRange);
+        const matches = getMatchingCasesForParsed(parsed, dateBounds, moduleIds);
+
+        if (matches.length === 0) {
+          toast.error("No bugs found matching your filters to copy.");
+          return;
+        }
+
+        const escapeTsv = (val: any): string => {
+          if (val === null || val === undefined) return "";
+          const cleanVal = String(val)
+            .replace(/\t/g, " ")
+            .replace(/\r?\n/g, " ")
+            .trim();
+          return cleanVal;
+        };
+
+        const rows = matches.map((tc) => {
+          const moduleName = modules.find((m) => m.id === tc.module_id)?.name || "";
+          const stepsStr = (tc.steps || [])
+            .map((s, i) => `${s.order || i + 1}. ${s.action} → ${s.expected}`)
+            .join(" | ");
+
+          return [
+            moduleName,
+            tc.title,
+            tc.description || "",
+            stepsStr,
+            tc.expected_result || "",
+            tc.status,
+            tc.screenshot_url || "",
+            tc.priority,
+            tc.actual_result || "",
+          ].map(escapeTsv);
+        });
+
+        const clipboardContent = rows.map((r) => r.join("\t")).join("\n");
+
+        navigator.clipboard.writeText(clipboardContent)
+          .then(() => {
+            toast.success(`Copied ${matches.length} bugs to clipboard! You can paste (Ctrl+V) directly into Google Sheets.${unsupportedNote}`);
+          })
+          .catch((err) => {
+            console.error("Failed to copy table: ", err);
+            toast.error("Failed to copy table to clipboard.");
+          });
       } else if (parsed.action === "summarize") {
         const dateBounds = getDateRangeBounds(parsed.dateRange);
         const matches = getMatchingCasesForParsed(parsed, dateBounds, moduleIds);
@@ -519,6 +566,53 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
     return `/api/testcases/export?${params.toString()}`;
   };
 
+  const handleCopyCsvToClipboard = () => {
+    if (filteredCases.length === 0) {
+      toast.error("No bugs found in the current filter to copy.");
+      return;
+    }
+
+    const escapeTsv = (val: any): string => {
+      if (val === null || val === undefined) return "";
+      // Replace tabs and newlines inside data with spaces to prevent column/row misalignment on paste
+      const cleanVal = String(val)
+        .replace(/\t/g, " ")
+        .replace(/\r?\n/g, " ")
+        .trim();
+      return cleanVal;
+    };
+
+    const rows = filteredCases.map((tc) => {
+      const moduleName = modules.find((m) => m.id === tc.module_id)?.name || "";
+      const stepsStr = (tc.steps || [])
+        .map((s, i) => `${s.order || i + 1}. ${s.action} → ${s.expected}`)
+        .join(" | ");
+
+      return [
+        moduleName,
+        tc.title,
+        tc.description || "",
+        stepsStr,
+        tc.expected_result || "",
+        tc.status,
+        tc.screenshot_url || "",
+        tc.priority,
+        tc.actual_result || "",
+      ].map(escapeTsv);
+    });
+
+    const clipboardContent = rows.map((r) => r.join("\t")).join("\n");
+
+    navigator.clipboard.writeText(clipboardContent)
+      .then(() => {
+        toast.success(`Copied ${filteredCases.length} bugs (content only, no dates) to clipboard! You can paste (Ctrl+V) directly into Google Sheets.`);
+      })
+      .catch((err) => {
+        console.error("Failed to copy table: ", err);
+        toast.error("Failed to copy table to clipboard.");
+      });
+  };
+
   return (
     <div className="space-y-6">
       {/* Board Controls / Filters */}
@@ -592,6 +686,15 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
             Showing <span className="text-foreground font-bold">{filteredCases.length}</span> of {projectCases.length} bugs
           </div>
           <ImportButton projectId={projectId} onImported={() => fetchBoardData(projectId)} />
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopyCsvToClipboard}
+            className="gap-1.5"
+          >
+            <Copy className="h-4 w-4" /> Copy for Sheets
+          </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger onClick={() => setIsMoreMenuOpen((v) => !v)}>

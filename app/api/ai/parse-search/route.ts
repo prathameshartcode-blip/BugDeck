@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { callGroqText } from "@/lib/groq";
 
 export interface ParsedSearchFilters {
-  action: "filter" | "export" | "summarize";
+  action: "filter" | "export" | "summarize" | "copy";
   modules: string[];
   priorities: ("critical" | "high" | "medium" | "low")[];
   statuses: ("open" | "Fixed" | "reopen" | "todiscuss" | "closed")[];
@@ -17,6 +17,8 @@ language query into a structured filter/export/summarize object matching the boa
 ACTION:
 - "export" if the user is clearly asking to export, download, or generate a CSV/file of bugs
   (e.g. "export the reopened bugs", "download today's bugs", "give me a csv of...").
+- "copy" if the user is asking to copy bugs to clipboard for pasting into sheets/spreadsheets
+  (e.g. "copy open and reopen", "copy critical bugs", "copy for sheets", "copy to clipboard").
 - "summarize" if the user is asking for an overview, report, or summary of bugs rather than just
   narrowing the board view or downloading a file (e.g. "summary of bugs I added today", "what
   are the new bugs and what's the issue", "give me a rundown of critical bugs in Auth").
@@ -47,7 +49,7 @@ RULES:
 
 OUTPUT FORMAT:
 {
-  "action": "filter" | "export" | "summarize",
+  "action": "filter" | "export" | "summarize" | "copy",
   "modules": string[],
   "priorities": ("critical"|"high"|"medium"|"low")[],
   "statuses": ("open"|"Fixed"|"reopen"|"todiscuss"|"closed")[],
@@ -76,7 +78,7 @@ export async function POST(req: NextRequest) {
 
     // Defensive defaults in case the model omits a key
     const result: ParsedSearchFilters = {
-      action: parsed?.action === "export" ? "export" : parsed?.action === "summarize" ? "summarize" : "filter",
+      action: parsed?.action === "export" ? "export" : parsed?.action === "summarize" ? "summarize" : parsed?.action === "copy" ? "copy" : "filter",
       modules: Array.isArray(parsed?.modules) ? parsed.modules : [],
       priorities: Array.isArray(parsed?.priorities) ? parsed.priorities : [],
       statuses: Array.isArray(parsed?.statuses) ? parsed.statuses : [],

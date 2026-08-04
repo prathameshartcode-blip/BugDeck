@@ -426,12 +426,12 @@ export function ImportButton({ projectId, onImported }: ImportButtonProps) {
       </Button>
 
       {/* Column guide link */}
-      <button
+      {/* <button
         onClick={() => setGuideOpen(true)}
         className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
       >
         Column guide
-      </button>
+      </button> */}
 
       {/* ── Column Guide Modal ── */}
       <Modal open={guideOpen} onClose={() => setGuideOpen(false)} title="CSV Column Guide" className="max-w-lg">
