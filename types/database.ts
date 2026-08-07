@@ -74,6 +74,16 @@ export type Module = {
   created_at: string;
 };
 
+/** A test environment (dev, staging, prod) within a project. */
+export type Environment = {
+  id: string;
+  project_id: string;
+  name: string;
+  color: string;
+  is_default: boolean;
+  created_at: string;
+};
+
 /** A single status transition a bug went through — the log that makes "closed today",
  *  "reopened 3 times", etc. answerable, since `cards` only ever holds the current status. */
 export type StatusHistory = {
@@ -109,6 +119,7 @@ export type TestCase = {
   id: string;
   module_id: string;
   project_id: string;
+  environment_id: string | null;
   title: string;
   description: string | null;
   priority: TestCasePriority;

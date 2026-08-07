@@ -1,12 +1,13 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
-import type { TestCase, Module, StatusHistory } from "@/types/database";
+import type { TestCase, Module, StatusHistory, Environment } from "@/types/database";
 import { useProjectStore } from "./project-store";
 import { useAuthStore } from "./auth-store";
 
 interface BoardState {
   testCases: TestCase[];
   modules: Module[];
+  environments: Environment[];
   loading: boolean;
   error: string | null;
 
@@ -30,6 +31,12 @@ interface BoardState {
     projectId: string
   ) => Promise<Module | undefined>;
   deleteModule: (moduleId: string, projectId: string) => Promise<void>;
+  addEnvironment: (
+    name: string,
+    color: string,
+    projectId: string
+  ) => Promise<Environment | undefined>;
+  deleteEnvironment: (environmentId: string, projectId: string) => Promise<void>;
   _syncProjectStats: (projectId: string) => void;
 }
 
@@ -71,6 +78,7 @@ async function logStatusHistoryBatch(
 export const useBoardStore = create<BoardState>()((set, get) => ({
   testCases: [],
   modules: [],
+  environments: [],
   loading: false,
   error: null,
 
@@ -87,24 +95,34 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
 
       let modules: Module[] = modulesData || [];
 
-      // Auto-seed modules if empty (in Supabase)
-      // if (modules.length === 0) {
-      //   const seedData = SEED_MODULES.map(m => ({
-      //     project_id: projectId,
-      //     name: m.name,
-      //     description: m.description,
-      //     metadata: null,
-      //   }));
-      //   const { data: insertedModules, error: insertError } = await supabase
-      //     .from('modules')
-      //     .insert(seedData)
-      //     .select();
-        
-      //   if (insertError) throw insertError;
-      //   if (insertedModules) {
-      //     modules = insertedModules;
-      //   }
-      // }
+      // Fetch environments
+      const { data: environmentsData, error: environmentsError } = await supabase
+        .from('environments')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: true });
+
+      if (environmentsError) throw environmentsError;
+
+      let environments: Environment[] = environmentsData || [];
+
+      // Create default environment if none exists
+      if (environments.length === 0) {
+        const { data: defaultEnv, error: insertError } = await supabase
+          .from('environments')
+          .insert({
+            project_id: projectId,
+            name: 'Development',
+            color: '#6366f1',
+            is_default: true,
+          })
+          .select()
+          .single();
+
+        if (!insertError && defaultEnv) {
+          environments = [defaultEnv];
+        }
+      }
 
       // Fetch test cases (cards in DB)
       const { data: cardsData, error: cardsError } = await supabase
@@ -120,6 +138,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
         id: c.id,
         module_id: c.module_id || "",
         project_id: c.project_id,
+        environment_id: c.environment_id || null,
         title: c.title,
         description: c.description,
         type: c.type || "functional",
@@ -128,14 +147,14 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
         steps: c.steps || [],
         expected_result: c.expected_result || "",
         actual_result: c.actual_result || null,
-        screenshot_url: c.screenshot_url || null,
+        screenshot_urls: Array.isArray(c.screenshot_urls) ? c.screenshot_urls : (c.screenshot_url ? [c.screenshot_url] : []),
         notes: c.notes || null,
         created_by: c.created_by || "",
         created_at: c.created_at,
         updated_at: c.updated_at,
       }));
 
-      set({ testCases, modules, loading: false });
+      set({ testCases, modules, environments, loading: false });
       get()._syncProjectStats(projectId);
     } catch (err: any) {
       set({ error: err.message || 'Failed to fetch board data', loading: false });
@@ -151,6 +170,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
       const dbPayload = {
         project_id: input.project_id,
         module_id: input.module_id,
+        environment_id: input.environment_id,
         title: input.title,
         description: input.description,
         type: input.type,
@@ -160,7 +180,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
         expected_result: input.expected_result,
         actual_result: input.actual_result,
         notes: input.notes,
-        screenshot_url: input.screenshot_url,
+        screenshot_urls: input.screenshot_urls,
         created_by: userId,
       };
 
@@ -176,6 +196,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
         id: newCard.id,
         module_id: newCard.module_id || "",
         project_id: newCard.project_id,
+        environment_id: newCard.environment_id || null,
         title: newCard.title,
         description: newCard.description,
         type: newCard.type || "functional",
@@ -184,7 +205,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
         steps: newCard.steps || [],
         expected_result: newCard.expected_result || "",
         actual_result: newCard.actual_result || null,
-        screenshot_url: newCard.screenshot_url || null,
+        screenshot_urls: Array.isArray(newCard.screenshot_urls) ? newCard.screenshot_urls : (newCard.screenshot_url ? [newCard.screenshot_url] : []),
         notes: newCard.notes || null,
         created_by: newCard.created_by || "",
         created_at: newCard.created_at,
@@ -435,6 +456,46 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
       }
     } catch (err: any) {
       set({ error: err.message || 'Failed to delete module' });
+      console.error(err);
+    }
+  },
+
+  addEnvironment: async (name, color, projectId) => {
+    try {
+      const { data: newEnvironment, error } = await supabase
+        .from('environments')
+        .insert({
+          project_id: projectId,
+          name,
+          color,
+          is_default: false,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      set((state) => ({ environments: [...state.environments, newEnvironment] }));
+
+      return newEnvironment;
+    } catch (err: any) {
+      set({ error: err.message || 'Failed to add environment' });
+      console.error(err);
+    }
+  },
+
+  deleteEnvironment: async (environmentId, projectId) => {
+    try {
+      const { error } = await supabase
+        .from('environments')
+        .delete()
+        .eq('id', environmentId);
+
+      if (error) throw error;
+
+      set((state) => ({ environments: state.environments.filter((e) => e.id !== environmentId) }));
+    } catch (err: any) {
+      set({ error: err.message || 'Failed to delete environment' });
       console.error(err);
     }
   },

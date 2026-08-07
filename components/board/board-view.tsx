@@ -21,6 +21,7 @@ import { GenerateRegressionTestsDialog } from "@/components/ai/generate-regressi
 import { BugSummaryDialog, type BugSummaryStats } from "@/components/ai/bug-summary-dialog";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { ExportConfigDialog } from "@/components/projects/export-config-dialog";
+import { EnvironmentDialog } from "@/components/projects/environment-dialog";
 import { useExportConfig } from "@/hooks/use-export-config";
 import { buildTsvContent } from "@/lib/export-columns";
 
@@ -127,9 +128,9 @@ function InlineEdit({
 }
 
 export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
-  const { testCases, reorderTestCase, updateTestCase, deleteTestCase, deleteMultipleTestCases, moveMultipleTestCases, createTestCase, addModule, deleteModule, modules, fetchBoardData } = useBoardStore();
+  const { testCases, reorderTestCase, updateTestCase, deleteTestCase, deleteMultipleTestCases, moveMultipleTestCases, createTestCase, addModule, deleteModule, addEnvironment, deleteEnvironment, modules, environments, fetchBoardData } = useBoardStore();
   const { createRunTestCase } = useRunTestStore();
-  const { config: exportConfig, loading: exportConfigLoading, saveConfig, refetch: refetchExportConfig } = useExportConfig(projectId);
+  const { config: exportConfig, refetch: refetchExportConfig } = useExportConfig(projectId);
 
   useEffect(() => {
     if (projectId) fetchBoardData(projectId);
@@ -139,7 +140,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const [isDetailOpen,     setIsDetailOpen]     = useState(false);
   const [isCreateOpen,     setIsCreateOpen]     = useState(false);
   const [newTestCase, setNewTestCase] = useState<Partial<TestCase>>({
-    title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_urls: [],
+    title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_urls: [], environment_id: null,
   });
   const [creatingModule, setCreatingModule] = useState(false);
   const [newModuleName,  setNewModuleName]  = useState("");
@@ -156,6 +157,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const [isRegressionOpen, setIsRegressionOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [isExportConfigOpen, setIsExportConfigOpen] = useState(false);
+  const [isEnvironmentOpen, setIsEnvironmentOpen] = useState(false);
 
   // Tracks live edits inside the detail dialog before saving
   const [editingCase, setEditingCase] = useState<Partial<TestCase>>({});
@@ -172,6 +174,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
   const [moduleFilter,   setModuleFilter]   = useState<string[]>([]);
   const [statusFilter,   setStatusFilter]   = useState<string[]>([]);
+  const [environmentFilter, setEnvironmentFilter] = useState<string>("all");
   const [textSearchFilter, setTextSearchFilter] = useState("");
 
   // AI natural-language search
@@ -199,11 +202,12 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
     const matchesPriority = priorityFilter.length === 0 || priorityFilter.includes(tc.priority);
     const matchesModule   = moduleFilter.length === 0 || moduleFilter.includes(tc.module_id);
     const matchesStatus   = statusFilter.length === 0 || statusFilter.includes(tc.status);
+    const matchesEnvironment = environmentFilter === "all" || tc.environment_id === environmentFilter;
     const matchesText     =
       textSearchFilter.trim() === "" ||
       tc.title.toLowerCase().includes(textSearchFilter.trim().toLowerCase()) ||
       (tc.description || "").toLowerCase().includes(textSearchFilter.trim().toLowerCase());
-    return matchesPriority && matchesModule && matchesStatus && matchesText;
+    return matchesPriority && matchesModule && matchesStatus && matchesEnvironment && matchesText;
   });
 
   // Best-effort match of an AI-returned module name to a real module id for this project
@@ -527,13 +531,14 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
       module_id:       newTestCase.module_id!,
       project_id:      projectId,
       status:          "open",
+      environment_id:  newTestCase.environment_id || null,
       screenshot_urls: newTestCase.screenshot_urls || [],
       steps:           newSteps.map((s, i) => ({ order: i + 1, action: s.action, expected: s.expected })),
       notes:           null,
       actual_result:   null,
     });
     setIsCreateOpen(false);
-    setNewTestCase({ title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_urls: [] });
+    setNewTestCase({ title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_urls: [], environment_id: null });
     setNewSteps([]);
     toast.success("Test case created successfully");
   };
@@ -603,9 +608,9 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase">Module</span>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase">Module</span>
             <MultiSelect
               options={modules.filter(m => m.project_id === projectId).map((mod) => ({ label: mod.name, value: mod.id }))}
               selected={moduleFilter}
@@ -743,13 +748,23 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
             <Sparkles className="h-4 w-4" /> Report Bug with AI
           </Button>
 
-          <Button onClick={() => setIsCreateOpen(true)} size="sm" className="gap-2">
-            <Plus className="h-4 w-4" /> New Bug
+          <Button onClick={() => {
+            setNewTestCase({ 
+              title: "", 
+              description: "", 
+              priority: "medium", 
+              expected_result: "", 
+              module_id: "", 
+              screenshot_urls: [], 
+              environment_id: null
+            });
+            setIsCreateOpen(true);
+          }} size="sm" className="gap-2">
+            <Plus className="h-4 w-4" /> Add Bug
           </Button>
-        </div>
+          </div>
         </div>
       </div>
-
       {/* Kanban Board Grid */}
       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin select-none">
         {COLUMNS.map((col) => (
@@ -767,6 +782,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
             onSelectAllInColumn={handleSelectAllInColumn}
             isSelectionMode={isSelectionMode}
             modules={modules}
+            environments={environments}
           />
         ))}
       </div>
@@ -1269,6 +1285,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
               steps: bug.steps.map((s, i) => ({ order: i + 1, action: s.action, expected: s.expected })),
               expected_result: bug.expected_result,
               actual_result: bug.actual_result || null,
+              environment_id: null,
               screenshot_urls: [],
               notes: null,
               module_id: bug.module_id || "",
@@ -1326,9 +1343,6 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
         open={isExportConfigOpen}
         onOpenChange={setIsExportConfigOpen}
         projectId={projectId}
-        config={exportConfig}
-        loading={exportConfigLoading}
-        onSave={saveConfig}
         onSaved={refetchExportConfig}
       />
     </div>

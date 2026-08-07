@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { TestCaseCard } from "./test-case-card";
-import type { TestCase, TestCaseStatus, Module } from "@/types/database";
+import type { TestCase, TestCaseStatus, Module, Environment } from "@/types/database";
 import { cn } from "@/lib/utils";
 import { Inbox, PartyPopper } from "lucide-react";
 
@@ -19,6 +19,7 @@ interface BoardColumnProps {
   onSelectAllInColumn?: (ids: string[], selectAll: boolean) => void;
   isSelectionMode?: boolean;
   modules?: Module[];
+  environments?: Environment[];
 }
 
 export const BoardColumn: React.FC<BoardColumnProps> = ({
@@ -34,6 +35,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
   onSelectAllInColumn,
   isSelectionMode,
   modules = [],
+  environments = [],
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -139,6 +141,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
         ) : (
           testCases.map((tc) => {
             const modName = modules.find((m) => m.id === tc.module_id)?.name;
+            const env = environments.find((e) => e.id === tc.environment_id);
             return (
               <TestCaseCard
                 key={tc.id}
@@ -151,6 +154,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
                 onSelectToggle={onSelectToggle}
                 isSelectionMode={isSelectionMode}
                 moduleName={modName}
+                environment={env}
                 onMoveStatus={onDropTestCase}
               />
             );

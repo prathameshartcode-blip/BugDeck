@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MoreHorizontal, Shield, ToggleLeft, Activity, Users, Zap, CheckCircle2, Image, ArrowRight, X, Clock, ExternalLink } from "lucide-react";
-import type { TestCase, TestCasePriority, TestCaseStatus } from "@/types/database";
+import type { TestCase, TestCasePriority, TestCaseStatus, Environment } from "@/types/database";
 import { cn } from "@/lib/utils";
 
 interface TestCaseCardProps {
@@ -17,6 +17,7 @@ interface TestCaseCardProps {
   onSelectToggle?: (id: string) => void;
   isSelectionMode?: boolean;
   moduleName?: string;
+  environment?: Environment;
   onMoveStatus?: (id: string, nextStatus: TestCaseStatus) => void;
 }
 
@@ -71,6 +72,7 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({
   onSelectToggle,
   isSelectionMode,
   moduleName,
+  environment,
   onMoveStatus,
 }) => {
   // Aging calculations
@@ -90,8 +92,9 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({
   const [isHoveringPopover, setIsHoveringPopover] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const showHoverPreview = (isHoveringTrigger || isHoveringPopover) && !!testCase.screenshot_url;
-  const isDirectImage = isDirectImageUrl(testCase.screenshot_url);
+  const screenshotUrl = testCase.screenshot_urls?.[0] || null;
+  const showHoverPreview = (isHoveringTrigger || isHoveringPopover) && !!screenshotUrl;
+  const isDirectImage = isDirectImageUrl(screenshotUrl);
 
   const handleMouseEnter = (e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -116,9 +119,9 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({
 
   // Safely extract hostname for external links
   let externalHostname = "Link";
-  if (testCase.screenshot_url) {
+  if (screenshotUrl) {
     try {
-      externalHostname = new URL(testCase.screenshot_url).hostname;
+      externalHostname = new URL(screenshotUrl).hostname;
     } catch {
       externalHostname = "External link";
     }
@@ -198,7 +201,7 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({
           <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-3 border-t border-border/50 h-8">
             <div className="flex items-center gap-1">
               <span>{testCase.steps.length} steps</span>
-              {testCase.screenshot_url && (
+              {screenshotUrl && (
                 <span
                   className={cn(
                     "ml-2 inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-md transition-all cursor-pointer font-semibold shadow-sm select-none border",
@@ -213,7 +216,7 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({
                     if (isDirectImage) {
                       setIsModalOpen(true);
                     } else {
-                      window.open(testCase.screenshot_url!, "_blank");
+                      window.open(screenshotUrl!, "_blank");
                     }
                   }}
                 >
@@ -242,7 +245,7 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({
       </Card>
 
       {/* Screenshot Hover Popover */}
-      {showHoverPreview && hoverPosition && testCase.screenshot_url && (
+      {showHoverPreview && hoverPosition && screenshotUrl && (
         <div
           style={{
             position: "fixed",
@@ -258,7 +261,7 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({
             if (isDirectImage) {
               setIsModalOpen(true);
             } else {
-              window.open(testCase.screenshot_url!, "_blank");
+              window.open(screenshotUrl!, "_blank");
             }
             setIsHoveringPopover(false);
           }}
@@ -266,7 +269,7 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({
           {isDirectImage ? (
             <div className="relative aspect-video rounded-lg overflow-hidden border border-border bg-muted/20">
               <img
-                src={testCase.screenshot_url}
+                src={screenshotUrl}
                 alt="Screenshot Preview"
                 className="w-full h-full object-cover"
               />
@@ -290,7 +293,7 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({
       )}
 
       {/* Full-Screen Image Lightbox Modal */}
-      {isModalOpen && isDirectImage && testCase.screenshot_url && (
+      {isModalOpen && isDirectImage && screenshotUrl && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4"
           onClick={(e) => {
@@ -309,7 +312,7 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({
               <X className="h-5 w-5" />
             </button>
             <img
-              src={testCase.screenshot_url}
+              src={screenshotUrl}
               alt="Full Size Screenshot"
               className="max-w-full max-h-[80vh] object-contain rounded-xl border border-white/10 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
