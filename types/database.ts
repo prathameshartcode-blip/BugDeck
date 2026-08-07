@@ -14,6 +14,33 @@ export type User = {
 /** Project status options. */
 export type ProjectStatus = "active" | "archived";
 
+/** Identifiers for exportable bug-board columns. */
+export type ExportColumnId =
+  | "created_at"
+  | "module"
+  | "title"
+  | "description"
+  | "steps"
+  | "expected_result"
+  | "status"
+  | "screenshot_urls"
+  | "priority"
+  | "actual_result"
+  | "notes"
+  | "type"
+  | "updated_at";
+
+/** A single column entry in a project's export configuration. */
+export type ExportColumnEntry = {
+  id: ExportColumnId;
+  enabled: boolean;
+};
+
+/** Per-project export layout for CSV download and Google Sheets copy. */
+export type ProjectExportConfig = {
+  columns: ExportColumnEntry[];
+};
+
 /** A QA project owned by a user. */
 export type Project = {
   id: string;
@@ -21,6 +48,7 @@ export type Project = {
   name: string;
   description: string | null;
   status: ProjectStatus;
+  export_config: ProjectExportConfig | null;
   created_at: string;
   updated_at: string;
 };
@@ -88,7 +116,7 @@ export type TestCase = {
   steps: TestStep[];
   expected_result: string;
   actual_result: string | null;
-  screenshot_url: string | null;
+  screenshot_urls: string[];
   notes: string | null;
   created_by: string;
   type: TestCaseType;
@@ -119,7 +147,7 @@ export type RunTestCase = {
   expected_result: string;
   actual_result: string | null;
   failed_reason: string | null;
-  screenshot_url: string | null;
+  screenshot_urls: string[];
   created_by: string;
   created_at: string;
   updated_at: string;

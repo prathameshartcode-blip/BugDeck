@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Trash, Plus, Pencil, Check, X as XIcon, Sparkles, Bug, ShieldCheck, MoreHorizontal, Download, Layers, Search, Loader2, Copy } from "lucide-react";
+import { Trash, Plus, Pencil, Check, X as XIcon, Sparkles, Bug, ShieldCheck, MoreHorizontal, Download, Layers, Search, Loader2, Copy, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { MultiSelect } from "@/components/ui/multi-select";
@@ -20,6 +20,9 @@ import { GenerateBugsDialog } from "@/components/ai/generate-bugs-dialog";
 import { GenerateRegressionTestsDialog } from "@/components/ai/generate-regression-tests-dialog";
 import { BugSummaryDialog, type BugSummaryStats } from "@/components/ai/bug-summary-dialog";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { ExportConfigDialog } from "@/components/projects/export-config-dialog";
+import { useExportConfig } from "@/hooks/use-export-config";
+import { buildTsvContent } from "@/lib/export-columns";
 
 interface BoardViewProps {
   projectId: string;
@@ -126,6 +129,7 @@ function InlineEdit({
 export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const { testCases, reorderTestCase, updateTestCase, deleteTestCase, deleteMultipleTestCases, moveMultipleTestCases, createTestCase, addModule, deleteModule, modules, fetchBoardData } = useBoardStore();
   const { createRunTestCase } = useRunTestStore();
+  const { config: exportConfig, loading: exportConfigLoading, saveConfig, refetch: refetchExportConfig } = useExportConfig(projectId);
 
   useEffect(() => {
     if (projectId) fetchBoardData(projectId);
@@ -135,7 +139,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const [isDetailOpen,     setIsDetailOpen]     = useState(false);
   const [isCreateOpen,     setIsCreateOpen]     = useState(false);
   const [newTestCase, setNewTestCase] = useState<Partial<TestCase>>({
-    title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_url: "",
+    title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_urls: [],
   });
   const [creatingModule, setCreatingModule] = useState(false);
   const [newModuleName,  setNewModuleName]  = useState("");
@@ -151,6 +155,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [isRegressionOpen, setIsRegressionOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [isExportConfigOpen, setIsExportConfigOpen] = useState(false);
 
   // Tracks live edits inside the detail dialog before saving
   const [editingCase, setEditingCase] = useState<Partial<TestCase>>({});
@@ -343,35 +348,8 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
           return;
         }
 
-        const escapeTsv = (val: any): string => {
-          if (val === null || val === undefined) return "";
-          const cleanVal = String(val)
-            .replace(/\t/g, " ")
-            .replace(/\r?\n/g, " ")
-            .trim();
-          return cleanVal;
-        };
-
-        const rows = matches.map((tc) => {
-          const moduleName = modules.find((m) => m.id === tc.module_id)?.name || "";
-          const stepsStr = (tc.steps || [])
-            .map((s, i) => `${s.order || i + 1}. ${s.action} → ${s.expected}`)
-            .join(" | ");
-
-          return [
-            moduleName,
-            tc.title,
-            tc.description || "",
-            stepsStr,
-            tc.expected_result || "",
-            tc.status,
-            tc.screenshot_url || "",
-            tc.priority,
-            tc.actual_result || "",
-          ].map(escapeTsv);
-        });
-
-        const clipboardContent = rows.map((r) => r.join("\t")).join("\n");
+        const getModuleName = (tc: TestCase) => modules.find((m) => m.id === tc.module_id)?.name || "";
+        const clipboardContent = buildTsvContent(matches, exportConfig, getModuleName);
 
         navigator.clipboard.writeText(clipboardContent)
           .then(() => {
@@ -463,8 +441,15 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   // Generic field updater — saves to DB and syncs local selectedTestCase
   const handleFieldUpdate = async (field: keyof TestCase, value: string) => {
     if (!selectedTestCase) return;
-    await updateTestCase(selectedTestCase.id, { [field]: value } as Partial<TestCase>);
-    setSelectedTestCase({ ...selectedTestCase, [field]: value });
+    // Special handling for screenshot_urls - parse comma-separated string to array
+    if (field === "screenshot_urls") {
+      const urlsArray = value.split(", ").filter(Boolean);
+      await updateTestCase(selectedTestCase.id, { [field]: urlsArray } as Partial<TestCase>);
+      setSelectedTestCase({ ...selectedTestCase, [field]: urlsArray });
+    } else {
+      await updateTestCase(selectedTestCase.id, { [field]: value } as Partial<TestCase>);
+      setSelectedTestCase({ ...selectedTestCase, [field]: value });
+    }
   };
 
   const handleUpdateStatus = async (status: TestCaseStatus) => {
@@ -542,13 +527,13 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
       module_id:       newTestCase.module_id!,
       project_id:      projectId,
       status:          "open",
-      screenshot_url:  newTestCase.screenshot_url || null,
+      screenshot_urls: newTestCase.screenshot_urls || [],
       steps:           newSteps.map((s, i) => ({ order: i + 1, action: s.action, expected: s.expected })),
       notes:           null,
       actual_result:   null,
     });
     setIsCreateOpen(false);
-    setNewTestCase({ title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_url: "" });
+    setNewTestCase({ title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_urls: [] });
     setNewSteps([]);
     toast.success("Test case created successfully");
   };
@@ -572,40 +557,12 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
       return;
     }
 
-    const escapeTsv = (val: any): string => {
-      if (val === null || val === undefined) return "";
-      // Replace tabs and newlines inside data with spaces to prevent column/row misalignment on paste
-      const cleanVal = String(val)
-        .replace(/\t/g, " ")
-        .replace(/\r?\n/g, " ")
-        .trim();
-      return cleanVal;
-    };
-
-    const rows = filteredCases.map((tc) => {
-      const moduleName = modules.find((m) => m.id === tc.module_id)?.name || "";
-      const stepsStr = (tc.steps || [])
-        .map((s, i) => `${s.order || i + 1}. ${s.action} → ${s.expected}`)
-        .join(" | ");
-
-      return [
-        moduleName,
-        tc.title,
-        tc.description || "",
-        stepsStr,
-        tc.expected_result || "",
-        tc.status,
-        tc.screenshot_url || "",
-        tc.priority,
-        tc.actual_result || "",
-      ].map(escapeTsv);
-    });
-
-    const clipboardContent = rows.map((r) => r.join("\t")).join("\n");
+    const getModuleName = (tc: TestCase) => modules.find((m) => m.id === tc.module_id)?.name || "";
+    const clipboardContent = buildTsvContent(filteredCases, exportConfig, getModuleName);
 
     navigator.clipboard.writeText(clipboardContent)
       .then(() => {
-        toast.success(`Copied ${filteredCases.length} bugs (content only, no dates) to clipboard! You can paste (Ctrl+V) directly into Google Sheets.`);
+        toast.success(`Copied ${filteredCases.length} bugs to clipboard! You can paste (Ctrl+V) directly into Google Sheets.`);
       })
       .catch((err) => {
         console.error("Failed to copy table: ", err);
@@ -694,6 +651,15 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
             className="gap-1.5"
           >
             <Copy className="h-4 w-4" /> Copy for Sheets
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsExportConfigOpen(true)}
+            className="gap-1.5"
+          >
+            <Settings2 className="h-4 w-4" /> Export Config
           </Button>
 
           <DropdownMenu>
@@ -1017,21 +983,25 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
                       </div>
                     </div>
 
-                    {/* Screenshot URL — inline editable */}
+                    {/* Screenshot URLs — inline editable */}
                     <div className="space-y-1">
-                      <span className="text-xs font-bold text-muted-foreground">Screenshot URL</span>
+                      <span className="text-xs font-bold text-muted-foreground">Screenshot URLs</span>
                       <div className="p-2 bg-muted/30 border border-border/50 rounded-lg">
                         <InlineEdit
-                          value={selectedTestCase.screenshot_url || ""}
-                          onSave={(v) => handleFieldUpdate("screenshot_url", v)}
-                          placeholder="Paste screenshot URL…"
+                          value={(selectedTestCase.screenshot_urls || []).join(", ")}
+                          onSave={(v) => handleFieldUpdate("screenshot_urls", v)}
+                          placeholder="Paste screenshot URLs separated by commas…"
                         />
                       </div>
-                      {selectedTestCase.screenshot_url && (
-                        <a href={selectedTestCase.screenshot_url} target="_blank" rel="noreferrer"
-                          className="text-[10px] text-primary hover:underline truncate block px-1">
-                          Open link ↗
-                        </a>
+                      {(selectedTestCase.screenshot_urls || []).length > 0 && (
+                        <div className="space-y-1">
+                          {(selectedTestCase.screenshot_urls || []).map((url, idx) => (
+                            <a key={idx} href={url} target="_blank" rel="noreferrer"
+                              className="text-[10px] text-primary hover:underline truncate block px-1">
+                              Screenshot {idx + 1} open link
+                            </a>
+                          ))}
+                        </div>
                       )}
                     </div>
 
@@ -1164,8 +1134,8 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
               <Textarea value={newTestCase.expected_result} onChange={(e) => setNewTestCase({ ...newTestCase, expected_result: e.target.value })} placeholder="What should happen overall?" rows={2} />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold">Screenshot URL (Optional)</label>
-              <Input value={newTestCase.screenshot_url || ""} onChange={(e) => setNewTestCase({ ...newTestCase, screenshot_url: e.target.value })} placeholder="https://..." className="text-xs h-9" />
+              <label className="text-xs font-semibold">Screenshot URLs (Optional)</label>
+              <Input value={(newTestCase.screenshot_urls || []).join(", ")} onChange={(e) => setNewTestCase({ ...newTestCase, screenshot_urls: e.target.value.split(", ").filter(Boolean) })} placeholder="https://..., https://..." className="text-xs h-9" />
             </div>
             <div className="space-y-3 pt-4 border-t border-border">
               <label className="text-xs font-semibold">Test Steps</label>
@@ -1299,7 +1269,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
               steps: bug.steps.map((s, i) => ({ order: i + 1, action: s.action, expected: s.expected })),
               expected_result: bug.expected_result,
               actual_result: bug.actual_result || null,
-              screenshot_url: null,
+              screenshot_urls: [],
               notes: null,
               module_id: bug.module_id || "",
               project_id: projectId,
@@ -1329,7 +1299,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
                 expected_result: test.expected_result,
                 actual_result: null,
                 failed_reason: null,
-                screenshot_url: null,
+                screenshot_urls: [],
                 module_id: test.module_id,
                 project_id: projectId,
               });
@@ -1349,6 +1319,17 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
         stats={summaryStats}
         headline={summaryHeadline}
         insights={summaryInsights}
+      />
+
+      {/* ── Export Configuration Dialog ── */}
+      <ExportConfigDialog
+        open={isExportConfigOpen}
+        onOpenChange={setIsExportConfigOpen}
+        projectId={projectId}
+        config={exportConfig}
+        loading={exportConfigLoading}
+        onSave={saveConfig}
+        onSaved={refetchExportConfig}
       />
     </div>
   );

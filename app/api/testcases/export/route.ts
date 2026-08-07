@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-
-function escapeCsv(val: string): string {
-  if (!val) return '';
-  const s = String(val);
-  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
-    return '"' + s.replace(/"/g, '""') + '"';
-  }
-  return s;
-}
+import {
+  escapeCsv,
+  getDefaultExportConfig,
+  normalizeExportConfig,
+  getExportHeaders,
+  formatExportRow,
+  cardRowToTestCase,
+  getModuleNameFromCardRow,
+} from '@/lib/export-columns';
 
 export async function GET(req: NextRequest) {
   const projectId = req.nextUrl.searchParams.get('projectId');
@@ -22,6 +22,16 @@ export async function GET(req: NextRequest) {
   const idsParam       = req.nextUrl.searchParams.get('ids');
   const dateFrom       = req.nextUrl.searchParams.get('dateFrom');
   const dateTo         = req.nextUrl.searchParams.get('dateTo');
+
+  const { data: projectRow } = await supabase
+    .from('projects')
+    .select('export_config')
+    .eq('id', projectId)
+    .maybeSingle();
+
+  const exportConfig = projectRow?.export_config
+    ? normalizeExportConfig(projectRow.export_config)
+    : getDefaultExportConfig();
 
   let query = supabase
     .from('cards')
@@ -62,39 +72,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // All columns — matches exactly what the import expects
-  const headers = [
-    'Created At',
-    'Module',
-    'Title',
-    'Description',
-    'Steps',
-    'Expected Result',
-    'Status',
-    'Screenshot URL',
-    'Priority',
-    'Actual Result',
-    'Notes',
-  ];
+  const headers = getExportHeaders(exportConfig);
 
-  const rows = (testCases || []).map((tc: any) => [
-    escapeCsv(tc.created_at || ''),
-    escapeCsv(tc.modules?.name || ''),
-    escapeCsv(tc.title || ''),
-    escapeCsv(tc.description || ''),
-    escapeCsv((tc.steps || []).map((s: any, i: number) => `${s.order || i + 1}. ${s.action}`).join(' | ')),
-    escapeCsv(tc.expected_result || ''),
-    // Export status as lowercase so re-importing always matches STATUS_MAP correctly
-    escapeCsv((tc.column_id || 'open').toLowerCase()),
-    escapeCsv(tc.screenshot_url || ''),
-    escapeCsv(tc.priority || 'medium'),
-    escapeCsv(tc.actual_result || ''),
-    escapeCsv(tc.notes || ''),
-  ]);
+  const rows = (testCases || []).map((row: Record<string, unknown>) => {
+    const tc = cardRowToTestCase(row);
+    const moduleName = getModuleNameFromCardRow(row);
+    return formatExportRow(tc, exportConfig, 'csv', { moduleName }).map(escapeCsv);
+  });
 
   const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
 
-  // UTF-8 BOM so Excel opens it correctly
   return new NextResponse('\uFEFF' + csvContent, {
     status: 200,
     headers: {
