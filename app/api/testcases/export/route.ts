@@ -81,6 +81,7 @@ export async function GET(req: NextRequest) {
   });
 
   const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+  
 
   return new NextResponse('\uFEFF' + csvContent, {
     status: 200,
