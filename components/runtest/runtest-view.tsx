@@ -831,7 +831,7 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
               expected_result: tc.expected_result,
               actual_result: null,
               failed_reason: null,
-              screenshot_url: null,
+              screenshot_urls: [],
               module_id: tc.module_id || "",
               project_id: projectId,
             });
