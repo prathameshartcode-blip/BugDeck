@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useImperativeHandle, forwardRef } from "react";
 import { Upload, CheckCircle, AlertTriangle, Info, X, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -152,7 +152,11 @@ interface ImportButtonProps {
   onImported: () => void;
 }
 
-export function ImportButton({ projectId, onImported }: ImportButtonProps) {
+export interface ImportButtonRef {
+  triggerImport: () => void;
+}
+
+export const ImportButton = forwardRef<ImportButtonRef, ImportButtonProps>(({ projectId, onImported }, ref) => {
   const fileRef  = useRef<HTMLInputElement>(null);
   const { modules } = useBoardStore();
   const { user }    = useAuthStore();
@@ -166,6 +170,11 @@ export function ImportButton({ projectId, onImported }: ImportButtonProps) {
     errors:   string[];
     unmatchedColumns: string[];
   } | null>(null);
+
+  // Expose triggerImport function to parent
+  useImperativeHandle(ref, () => ({
+    triggerImport: () => fileRef.current?.click()
+  }));
 
   // ── Module mapping state ─────────────────────────────────────────
   const [mappingOpen, setMappingOpen] = useState(false);
@@ -568,4 +577,6 @@ export function ImportButton({ projectId, onImported }: ImportButtonProps) {
       </Modal>
     </>
   );
-}
+});
+
+ImportButton.displayName = "ImportButton";

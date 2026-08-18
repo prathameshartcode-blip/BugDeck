@@ -132,7 +132,7 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newCase, setNewCase] = useState<Partial<RunTestCase>>({
-    title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_url: "",
+    title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_urls: [],
   });
   const [creatingModule, setCreatingModule] = useState(false);
   const [newModuleName, setNewModuleName] = useState("");
@@ -230,10 +230,17 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
     toast.success(`${selectedCases.length} test cases moved to ${status}`);
   };
 
-  const handleFieldUpdate = async (field: keyof RunTestCase, value: string) => {
+  const handleFieldUpdate = async (field: keyof RunTestCase, value: string | string[]) => {
     if (!selectedCase) return;
-    await updateRunTestCase(selectedCase.id, { [field]: value } as Partial<RunTestCase>);
-    setSelectedCase({ ...selectedCase, [field]: value });
+    // Special handling for screenshot_urls - parse comma-separated string to array
+    if (field === "screenshot_urls" && typeof value === "string") {
+      const urlsArray = value.split(", ").filter(Boolean);
+      await updateRunTestCase(selectedCase.id, { [field]: urlsArray } as Partial<RunTestCase>);
+      setSelectedCase({ ...selectedCase, [field]: urlsArray });
+    } else {
+      await updateRunTestCase(selectedCase.id, { [field]: value } as Partial<RunTestCase>);
+      setSelectedCase({ ...selectedCase, [field]: value });
+    }
   };
 
   const handleUpdateStatus = async (status: RunTestStatus) => {
@@ -271,13 +278,13 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
       module_id: newCase.module_id!,
       project_id: projectId,
       status: "open",
-      screenshot_url: newCase.screenshot_url || null,
+      screenshot_urls: newCase.screenshot_urls || [],
       steps: newSteps.map((s, i) => ({ order: i + 1, action: s.action, expected: s.expected })),
       actual_result: null,
       failed_reason: null,
     });
     setIsCreateOpen(false);
-    setNewCase({ title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_url: "" });
+    setNewCase({ title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_urls: [] });
     setNewSteps([]);
     toast.success("Test case created successfully");
   };
@@ -591,19 +598,23 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
                     )}
 
                     <div className="space-y-1">
-                      <span className="text-xs font-bold text-muted-foreground">Screenshot URL</span>
+                      <span className="text-xs font-bold text-muted-foreground">Screenshot URLs</span>
                       <div className="p-2 bg-muted/30 border border-border/50 rounded-lg">
                         <InlineEdit
-                          value={selectedCase.screenshot_url || ""}
-                          onSave={(v) => handleFieldUpdate("screenshot_url", v)}
-                          placeholder="Paste screenshot URL…"
+                          value={(selectedCase.screenshot_urls || []).join(", ")}
+                          onSave={(v) => handleFieldUpdate("screenshot_urls", v.split(", ").filter(Boolean))}
+                          placeholder="Paste screenshot URLs separated by commas…"
                         />
                       </div>
-                      {selectedCase.screenshot_url && (
-                        <a href={selectedCase.screenshot_url} target="_blank" rel="noreferrer"
-                          className="text-[10px] text-primary hover:underline truncate block px-1">
-                          Open link ↗
-                        </a>
+                      {(selectedCase.screenshot_urls || []).length > 0 && (
+                        <div className="space-y-1">
+                          {(selectedCase.screenshot_urls || []).map((url, idx) => (
+                            <a key={idx} href={url} target="_blank" rel="noreferrer"
+                              className="text-[10px] text-primary hover:underline truncate block px-1">
+                              Screenshot {idx + 1} open link ↗
+                            </a>
+                          ))}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -706,8 +717,8 @@ export const RunTestView: React.FC<RunTestViewProps> = ({ projectId }) => {
               <Textarea value={newCase.expected_result} onChange={(e) => setNewCase({ ...newCase, expected_result: e.target.value })} rows={2} />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold">Screenshot URL (Optional)</label>
-              <Input value={newCase.screenshot_url || ""} onChange={(e) => setNewCase({ ...newCase, screenshot_url: e.target.value })} className="text-xs h-9" />
+              <label className="text-xs font-semibold">Screenshot URLs (Optional)</label>
+              <Input value={(newCase.screenshot_urls || []).join(", ")} onChange={(e) => setNewCase({ ...newCase, screenshot_urls: e.target.value.split(", ").filter(Boolean) })} className="text-xs h-9" />
             </div>
             <div className="space-y-3 pt-4 border-t border-border">
               <label className="text-xs font-semibold">Steps to Check</label>

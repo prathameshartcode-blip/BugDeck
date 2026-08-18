@@ -1,18 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { BoardColumn } from "./board-column";
 import { useBoardStore } from "@/store/board-store";
 import { useRunTestStore } from "@/store/runtest-store";
 import type { TestCase, TestCaseStatus, TestCasePriority } from "@/types/database";
-import { ImportButton } from "./import-button";
+import { ImportButton, type ImportButtonRef } from "./import-button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Trash, Plus, Pencil, Check, X as XIcon, Sparkles, Bug, ShieldCheck, MoreHorizontal, Download, Layers, Search, Loader2, Copy, Settings2 } from "lucide-react";
+import { Trash, Plus, Pencil, Check, X as XIcon, Sparkles, Bug, ShieldCheck, MoreHorizontal, Download, Layers, Search, Loader2, Copy, Settings2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { MultiSelect } from "@/components/ui/multi-select";
@@ -187,6 +187,33 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const [summaryStats, setSummaryStats] = useState<BugSummaryStats | null>(null);
   const [summaryHeadline, setSummaryHeadline] = useState<string | null>(null);
   const [summaryInsights, setSummaryInsights] = useState<string[]>([]);
+
+  // Ref for triggering ImportButton's file input
+  const importButtonRef = useRef<ImportButtonRef>(null);
+
+  // Download CSV template
+  const downloadTemplate = () => {
+    const TEMPLATE_HEADERS = [
+      "Title",
+      "Module",
+      "Status",
+      "Priority",
+      "Description",
+      "Steps",
+      "Expected Result",
+      "Actual Result",
+      "Notes",
+      "Screenshot URL",
+    ];
+    const csvContent = TEMPLATE_HEADERS.join(",") + "\n";
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "bug-import-template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Pre-fill status filter from URL ?status= param (e.g. coming from dashboard chart click)
   const searchParams = useSearchParams();
@@ -647,7 +674,6 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
           <div className="text-xs text-muted-foreground font-medium">
             Showing <span className="text-foreground font-bold">{filteredCases.length}</span> of {projectCases.length} bugs
           </div>
-          <ImportButton projectId={projectId} onImported={() => fetchBoardData(projectId)} />
 
           <Button
             variant="outline"
@@ -658,15 +684,6 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
             <Copy className="h-4 w-4" /> Copy for Sheets
           </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsExportConfigOpen(true)}
-            className="gap-1.5"
-          >
-            <Settings2 className="h-4 w-4" /> Export Config
-          </Button>
-
           <DropdownMenu>
             <DropdownMenuTrigger onClick={() => setIsMoreMenuOpen((v) => !v)}>
               <Button variant="outline" size="sm" className="gap-1.5">
@@ -674,6 +691,21 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent open={isMoreMenuOpen} onClose={() => setIsMoreMenuOpen(false)} align="right" className="min-w-[170px]">
+              <DropdownMenuItem
+                onClick={() => { setIsMoreMenuOpen(false); setIsExportConfigOpen(true); }}
+              >
+                <Settings2 className="mr-2 h-3.5 w-3.5" /> Export Config
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => { setIsMoreMenuOpen(false); downloadTemplate(); }}
+              >
+                <Download className="mr-2 h-3.5 w-3.5" /> Template
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => { setIsMoreMenuOpen(false); importButtonRef.current?.triggerImport(); }}
+              >
+                <Upload className="mr-2 h-3.5 w-3.5" /> Import CSV
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => { setIsMoreMenuOpen(false); window.open(getExportUrl(), "_blank"); }}
               >
@@ -686,6 +718,11 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Hidden ImportButton for its import logic */}
+          <div style={{ display: 'none' }}>
+            <ImportButton ref={importButtonRef} projectId={projectId} onImported={() => fetchBoardData(projectId)} />
+          </div>
 
           {/* Bulk Actions Area */}
           {!isSelectionMode ? (

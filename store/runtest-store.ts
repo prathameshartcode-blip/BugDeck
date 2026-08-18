@@ -44,7 +44,7 @@ function mapRow(row: Record<string, unknown>): RunTestCase {
     expected_result: (row.expected_result as string) || "",
     actual_result: (row.actual_result as string) || null,
     failed_reason: (row.failed_reason as string) || null,
-    screenshot_url: (row.screenshot_url as string) || null,
+    screenshot_urls: (row.screenshot_urls as string[]) || [],
     created_by: (row.created_by as string) || "",
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
@@ -104,7 +104,7 @@ export const useRunTestStore = create<RunTestState>()((set, get) => ({
           expected_result: input.expected_result,
           actual_result: input.actual_result,
           failed_reason: input.failed_reason,
-          screenshot_url: input.screenshot_url,
+          screenshot_urls: input.screenshot_urls,
           created_by: userId,
         })
         .select()
