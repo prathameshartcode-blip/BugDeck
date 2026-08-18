@@ -4,8 +4,8 @@
  * Supports both text-only and vision (image) calls.
  *
  * Model strategy (balancing quality vs quota):
- *  - TEXT_MODEL  : llama-3.1-8b-instant  — tiny, fast, great at structured JSON output
- *  - VISION_MODEL: meta-llama/llama-4-maverick-17b-128e-instruct — best vision on Groq free tier
+ *  - TEXT_MODEL  : openai/gpt-oss-20b  — tiny, fast, supports structured outputs, reasoning, and JSON mode
+ *  - VISION_MODEL: qwen/qwen3.6-27b  — the only vision model on Groq free tier
  *
  * Token budgets per endpoint (passed as max_tokens):
  *  - parse-search      : 300  (just a small JSON filter object)
@@ -17,8 +17,8 @@
 
 const GROQ_BASE = "https://api.groq.com/openai/v1/chat/completions";
 
-// llama-3.1-8b-instant: 14,400 req/day, 500K tokens/day — best quota on the free tier
-const TEXT_MODEL = "llama-3.1-8b-instant";
+// openai/gpt-oss-20b: tiny, fast, supports structured outputs, reasoning, and JSON mode
+const TEXT_MODEL = "openai/gpt-oss-20b";
 
 // qwen/qwen3.6-27b: only 1K req/day, 200K tokens/day — the ONLY vision model on Groq free tier.
 // Keep images compressed (max 900px JPEG 70%) to maximise how many calls fit in quota.
