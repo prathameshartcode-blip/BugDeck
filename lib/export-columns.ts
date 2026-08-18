@@ -251,6 +251,7 @@ export function cardRowToTestCase(row: Record<string, unknown>): TestCase {
     id: String(row.id ?? ""),
     module_id: String(row.module_id ?? ""),
     project_id: String(row.project_id ?? ""),
+    environment_id: row.environment_id != null ? String(row.environment_id) : null,
     title: String(row.title ?? ""),
     description: row.description != null ? String(row.description) : null,
     priority: (row.priority as TestCase["priority"]) || "medium",
