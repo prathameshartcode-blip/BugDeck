@@ -86,6 +86,24 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({
       testCase.status === "reopen" ||
       testCase.status === "todiscuss");
 
+  // Relative time helper
+  const getRelativeTimeStr = (): string => {
+    if (!testCase.created_at) return "";
+    const created = new Date(testCase.created_at);
+    
+    // Reset time part to compare full calendar days
+    const d1 = new Date(created.getFullYear(), created.getMonth(), created.getDate());
+    const d2 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    const diff = d2.getTime() - d1.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (days <= 0) return "today";
+    if (days === 1) return "1 day ago";
+    return `${days} days ago`;
+  };
+  const relativeTimeStr = getRelativeTimeStr();
+
   // Hover preview & modal states
   const [hoverPosition, setHoverPosition] = useState<{ x: number; y: number } | null>(null);
   const [isHoveringTrigger, setIsHoveringTrigger] = useState(false);
@@ -161,6 +179,17 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({
               )}
             </div>
             <div className="flex items-center gap-1.5 ml-auto overflow-hidden">
+              {relativeTimeStr && (
+                <span 
+                  className="text-[10px] text-muted-foreground/75 shrink-0" 
+                  title={`Added on: ${new Date(testCase.created_at).toLocaleString()}`}
+                >
+                  {relativeTimeStr}
+                </span>
+              )}
+              {relativeTimeStr && (isStale || moduleName) && (
+                <span className="text-muted-foreground/30 text-[10px] shrink-0 select-none">•</span>
+              )}
               {isStale && (
                 <span
                   className="text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded flex items-center gap-1 shrink-0 animate-pulse"
