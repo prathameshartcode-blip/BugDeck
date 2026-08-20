@@ -107,7 +107,7 @@ const COLUMN_DEFS: Record<ExportColumnId, ColumnDef> = {
     id: "screenshot_urls",
     label: "Screenshot URLs",
     description: "Links to attached screenshots",
-    getValue: (tc) => (tc.screenshot_urls || []).join(", "),
+    getValue: (tc) => (tc.screenshot_urls || []).join(" | "),
   },
   priority: {
     id: "priority",

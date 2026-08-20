@@ -1124,12 +1124,25 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
                     {/* Screenshot URLs — inline editable */}
                     <div className="space-y-1">
                       <span className="text-xs font-bold text-muted-foreground">Screenshot URLs</span>
-                      <div className="p-2 bg-muted/30 border border-border/50 rounded-lg">
-                        <InlineEdit
-                          value={(selectedTestCase.screenshot_urls || []).join(", ")}
-                          onSave={(v) => handleFieldUpdate("screenshot_urls", v)}
-                          placeholder="Paste screenshot URLs separated by commas…"
-                        />
+                      <div className="flex gap-2">
+                        <div className="flex-1 p-2 bg-muted/30 border border-border/50 rounded-lg">
+                          <InlineEdit
+                            value={(selectedTestCase.screenshot_urls || []).join(", ")}
+                            onSave={(v) => handleFieldUpdate("screenshot_urls", v)}
+                            placeholder="Paste screenshot URLs separated by commas…"
+                          />
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const currentUrls = selectedTestCase.screenshot_urls || [];
+                            handleFieldUpdate("screenshot_urls", [...currentUrls, ""]);
+                          }}
+                          className="h-9 px-3"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                       {(selectedTestCase.screenshot_urls || []).length > 0 && (
                         <div className="space-y-1">
@@ -1286,7 +1299,20 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
             </div>
             <div className="space-y-1">
               <label className="text-xs font-semibold">Screenshot URLs (Optional)</label>
-              <Input value={(newTestCase.screenshot_urls || []).join(", ")} onChange={(e) => setNewTestCase({ ...newTestCase, screenshot_urls: e.target.value.split(", ").filter(Boolean) })} placeholder="https://..., https://..." className="text-xs h-9" />
+              <div className="flex gap-2">
+                <Input value={(newTestCase.screenshot_urls || []).join(", ")} onChange={(e) => setNewTestCase({ ...newTestCase, screenshot_urls: e.target.value.split(", ").filter(Boolean) })} placeholder="https://..., https://..." className="text-xs h-9 flex-1" />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const currentUrls = newTestCase.screenshot_urls || [];
+                    setNewTestCase({ ...newTestCase, screenshot_urls: [...currentUrls, ""] });
+                  }}
+                  className="h-9 px-3"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
             <div className="space-y-3 pt-4 border-t border-border">
               <label className="text-xs font-semibold">Test Steps</label>

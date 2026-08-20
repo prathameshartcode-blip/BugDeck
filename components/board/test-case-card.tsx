@@ -112,7 +112,9 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({
   const [isHoveringPopover, setIsHoveringPopover] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const screenshotUrl = testCase.screenshot_urls?.[0] || null;
+  const screenshotUrls = testCase.screenshot_urls || [];
+  const screenshotUrl = screenshotUrls[0] || null;
+  const screenshotUrl2 = screenshotUrls[1] || null;
   const showHoverPreview = (isHoveringTrigger || isHoveringPopover) && !!screenshotUrl;
   const isDirectImage = isDirectImageUrl(screenshotUrl);
 
@@ -249,7 +251,6 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({
                       ? "text-primary bg-primary/5 hover:bg-primary hover:text-primary-foreground border-primary/20 hover:border-primary"
                       : "text-sky-600 dark:text-sky-400 bg-sky-500/10 hover:bg-sky-500 hover:text-white border-sky-500/20 hover:border-sky-500"
                   )}
-                  // onMouseEnter={handleMouseEnter}
                   onMouseLeave={handleMouseLeave}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -261,7 +262,28 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({
                   }}
                 >
                   {isDirectImage ? <Image className="h-2.5 w-2.5" /> : <ExternalLink className="h-2.5 w-2.5" />}
-                  <span>{isDirectImage ? "Screenshot" : "Link"}</span>
+                  <span>{isDirectImage ? "Screenshot 1" : "Link 1"}</span>
+                </span>
+              )}
+              {screenshotUrl2 && (
+                <span
+                  className={cn(
+                    "ml-1 inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-md transition-all cursor-pointer font-semibold shadow-sm select-none border",
+                    isDirectImageUrl(screenshotUrl2)
+                      ? "text-primary bg-primary/5 hover:bg-primary hover:text-primary-foreground border-primary/20 hover:border-primary"
+                      : "text-sky-600 dark:text-sky-400 bg-sky-500/10 hover:bg-sky-500 hover:text-white border-sky-500/20 hover:border-sky-500"
+                  )}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (isDirectImageUrl(screenshotUrl2)) {
+                      window.open(screenshotUrl2, "_blank");
+                    } else {
+                      window.open(screenshotUrl2, "_blank");
+                    }
+                  }}
+                >
+                  {isDirectImageUrl(screenshotUrl2) ? <Image className="h-2.5 w-2.5" /> : <ExternalLink className="h-2.5 w-2.5" />}
+                  <span>{isDirectImageUrl(screenshotUrl2) ? "Screenshot 2" : "Link 2"}</span>
                 </span>
               )}
             </div>
