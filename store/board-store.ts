@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
-import type { TestCase, Module, StatusHistory, Environment } from "@/types/database";
+import type { TestCase, Module, StatusHistory, Environment, Tester } from "@/types/database";
 import { useProjectStore } from "./project-store";
 import { useAuthStore } from "./auth-store";
 
@@ -8,6 +8,7 @@ interface BoardState {
   testCases: TestCase[];
   modules: Module[];
   environments: Environment[];
+  testers: Tester[];
   loading: boolean;
   error: string | null;
 
@@ -37,6 +38,11 @@ interface BoardState {
     projectId: string
   ) => Promise<Environment | undefined>;
   deleteEnvironment: (environmentId: string, projectId: string) => Promise<void>;
+  addTester: (
+    name: string,
+    projectId: string
+  ) => Promise<Tester | undefined>;
+  deleteTester: (testerId: string, projectId: string) => Promise<void>;
   _syncProjectStats: (projectId: string) => void;
 }
 
@@ -79,6 +85,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
   testCases: [],
   modules: [],
   environments: [],
+  testers: [],
   loading: false,
   error: null,
 
@@ -124,6 +131,22 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
         }
       }
 
+      // Fetch testers gracefully (might not exist yet if user hasn't run DDL migration)
+      let testers: Tester[] = [];
+      try {
+        const { data: testersData, error: testersError } = await supabase
+          .from('testers')
+          .select('*')
+          .eq('project_id', projectId)
+          .order('name', { ascending: true });
+
+        if (!testersError && testersData) {
+          testers = testersData;
+        }
+      } catch (err) {
+        console.warn("Failed to fetch testers table. Rerun migrations.", err);
+      }
+
       // Fetch test cases (cards in DB)
       const { data: cardsData, error: cardsError } = await supabase
         .from('cards')
@@ -139,6 +162,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
         module_id: c.module_id || "",
         project_id: c.project_id,
         environment_id: c.environment_id || null,
+        tester_id: c.tester_id || null,
         title: c.title,
         description: c.description,
         type: c.type || "functional",
@@ -154,7 +178,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
         updated_at: c.updated_at,
       }));
 
-      set({ testCases, modules, environments, loading: false });
+      set({ testCases, modules, environments, testers, loading: false });
       get()._syncProjectStats(projectId);
     } catch (err: any) {
       set({ error: err.message || 'Failed to fetch board data', loading: false });
@@ -171,6 +195,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
         project_id: input.project_id,
         module_id: input.module_id,
         environment_id: input.environment_id,
+        tester_id: input.tester_id || null,
         title: input.title,
         description: input.description,
         type: input.type,
@@ -197,6 +222,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
         module_id: newCard.module_id || "",
         project_id: newCard.project_id,
         environment_id: newCard.environment_id || null,
+        tester_id: newCard.tester_id || null,
         title: newCard.title,
         description: newCard.description,
         type: newCard.type || "functional",
@@ -497,6 +523,43 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
     } catch (err: any) {
       set({ error: err.message || 'Failed to delete environment' });
       console.error(err);
+    }
+  },
+
+  addTester: async (name, projectId) => {
+    try {
+      const { data: newTester, error } = await supabase
+        .from('testers')
+        .insert({ project_id: projectId, name })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      set((state) => ({ testers: [...state.testers, newTester].sort((a, b) => a.name.localeCompare(b.name)) }));
+      return newTester;
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to add tester';
+      set({ error: msg });
+      console.warn('[addTester]', msg);
+      return undefined;
+    }
+  },
+
+  deleteTester: async (testerId, projectId) => {
+    try {
+      const { error } = await supabase
+        .from('testers')
+        .delete()
+        .eq('id', testerId);
+
+      if (error) throw error;
+
+      set((state) => ({ testers: state.testers.filter((t) => t.id !== testerId) }));
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to delete tester';
+      set({ error: msg });
+      console.warn('[deleteTester]', msg);
     }
   },
 

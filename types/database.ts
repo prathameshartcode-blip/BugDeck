@@ -28,7 +28,8 @@ export type ExportColumnId =
   | "actual_result"
   | "notes"
   | "type"
-  | "updated_at";
+  | "updated_at"
+  | "tester";
 
 /** A single column entry in a project's export configuration. */
 export type ExportColumnEntry = {
@@ -71,6 +72,14 @@ export type Module = {
   name: string;
   description: string | null;
   metadata: Record<string, unknown> | null;
+  created_at: string;
+};
+
+/** A custom tester associated with a project. */
+export type Tester = {
+  id: string;
+  project_id: string;
+  name: string;
   created_at: string;
 };
 
@@ -120,6 +129,7 @@ export type TestCase = {
   module_id: string;
   project_id: string;
   environment_id: string | null;
+  tester_id: string | null;
   title: string;
   description: string | null;
   priority: TestCasePriority;

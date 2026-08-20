@@ -14,7 +14,8 @@ export type ExportColumnId =
   | "actual_result"
   | "notes"
   | "type"
-  | "updated_at";
+  | "updated_at"
+  | "tester";
 
 export type ExportColumnEntry = {
   id: ExportColumnId;
@@ -30,6 +31,7 @@ export type ExportFormat = "csv" | "tsv";
 
 export type ExportRowContext = {
   moduleName?: string;
+  testerName?: string;
 };
 
 type ColumnDef = {
@@ -51,6 +53,12 @@ const COLUMN_DEFS: Record<ExportColumnId, ColumnDef> = {
     label: "Module",
     description: "Feature area or component",
     getValue: (_tc, ctx) => ctx.moduleName || "",
+  },
+  tester: {
+    id: "tester",
+    label: "Tester",
+    description: "Who logged or tested this bug",
+    getValue: (_tc, ctx) => ctx.testerName || "",
   },
   title: {
     id: "title",
@@ -252,6 +260,7 @@ export function cardRowToTestCase(row: Record<string, unknown>): TestCase {
     module_id: String(row.module_id ?? ""),
     project_id: String(row.project_id ?? ""),
     environment_id: row.environment_id != null ? String(row.environment_id) : null,
+    tester_id: row.tester_id != null ? String(row.tester_id) : null,
     title: String(row.title ?? ""),
     description: row.description != null ? String(row.description) : null,
     priority: (row.priority as TestCase["priority"]) || "medium",
@@ -276,4 +285,9 @@ export function cardRowToTestCase(row: Record<string, unknown>): TestCase {
 export function getModuleNameFromCardRow(row: Record<string, unknown>): string {
   const modules = row.modules as { name?: string } | null | undefined;
   return modules?.name || "";
+}
+
+export function getTesterNameFromCardRow(row: Record<string, unknown>): string {
+  const testers = row.testers as { name?: string } | null | undefined;
+  return testers?.name || "";
 }

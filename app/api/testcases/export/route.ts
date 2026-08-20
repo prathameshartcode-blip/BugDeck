@@ -8,6 +8,7 @@ import {
   formatExportRow,
   cardRowToTestCase,
   getModuleNameFromCardRow,
+  getTesterNameFromCardRow,
 } from '@/lib/export-columns';
 
 export async function GET(req: NextRequest) {
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('cards')
-    .select('*, modules(name)')
+    .select('*, modules(name), testers(name)')
     .eq('project_id', projectId)
     .order('created_at', { ascending: true });
 
@@ -77,7 +78,8 @@ export async function GET(req: NextRequest) {
   const rows = (testCases || []).map((row: Record<string, unknown>) => {
     const tc = cardRowToTestCase(row);
     const moduleName = getModuleNameFromCardRow(row);
-    return formatExportRow(tc, exportConfig, 'csv', { moduleName }).map(escapeCsv);
+    const testerName = getTesterNameFromCardRow(row);
+    return formatExportRow(tc, exportConfig, 'csv', { moduleName, testerName }).map(escapeCsv);
   });
 
   const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');

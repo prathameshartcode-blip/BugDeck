@@ -128,7 +128,7 @@ function InlineEdit({
 }
 
 export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
-  const { testCases, reorderTestCase, updateTestCase, deleteTestCase, deleteMultipleTestCases, moveMultipleTestCases, createTestCase, addModule, deleteModule, addEnvironment, deleteEnvironment, modules, environments, fetchBoardData } = useBoardStore();
+  const { testCases, reorderTestCase, updateTestCase, deleteTestCase, deleteMultipleTestCases, moveMultipleTestCases, createTestCase, addModule, deleteModule, addEnvironment, deleteEnvironment, addTester, deleteTester, modules, environments, testers, fetchBoardData } = useBoardStore();
   const { createRunTestCase } = useRunTestStore();
   const { config: exportConfig, refetch: refetchExportConfig } = useExportConfig(projectId);
 
@@ -140,7 +140,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const [isDetailOpen,     setIsDetailOpen]     = useState(false);
   const [isCreateOpen,     setIsCreateOpen]     = useState(false);
   const [newTestCase, setNewTestCase] = useState<Partial<TestCase>>({
-    title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_urls: [], environment_id: null,
+    title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_urls: [], environment_id: null, tester_id: null,
   });
   const [creatingModule, setCreatingModule] = useState(false);
   const [newModuleName,  setNewModuleName]  = useState("");
@@ -158,6 +158,38 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [isExportConfigOpen, setIsExportConfigOpen] = useState(false);
   const [isEnvironmentOpen, setIsEnvironmentOpen] = useState(false);
+
+  // Tester state
+  const [activeTesterId, setActiveTesterId] = useState<string | null>(null);
+
+  // Load active tester from localStorage on mount/projectId change
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(`active_tester_${projectId}`);
+      if (stored) {
+        setActiveTesterId(stored);
+      } else {
+        setActiveTesterId(null);
+      }
+    }
+  }, [projectId]);
+
+  // Persist active tester selection to localStorage
+  const handleActiveTesterChange = (val: string | null) => {
+    setActiveTesterId(val);
+    if (typeof window !== "undefined") {
+      if (val) {
+        localStorage.setItem(`active_tester_${projectId}`, val);
+      } else {
+        localStorage.removeItem(`active_tester_${projectId}`);
+      }
+    }
+  };
+
+  const [testerFilter, setTesterFilter] = useState<string[]>([]);
+  const [isTestersOpen, setIsTestersOpen] = useState(false);
+  const [addingTesterName, setAddingTesterName] = useState("");
+  const [addingTester, setAddingTester] = useState(false);
 
   // Tracks live edits inside the detail dialog before saving
   const [editingCase, setEditingCase] = useState<Partial<TestCase>>({});
@@ -230,11 +262,12 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
     const matchesModule   = moduleFilter.length === 0 || moduleFilter.includes(tc.module_id);
     const matchesStatus   = statusFilter.length === 0 || statusFilter.includes(tc.status);
     const matchesEnvironment = environmentFilter === "all" || tc.environment_id === environmentFilter;
+    const matchesTester   = testerFilter.length === 0 || (tc.tester_id != null && testerFilter.includes(tc.tester_id));
     const matchesText     =
       textSearchFilter.trim() === "" ||
       tc.title.toLowerCase().includes(textSearchFilter.trim().toLowerCase()) ||
       (tc.description || "").toLowerCase().includes(textSearchFilter.trim().toLowerCase());
-    return matchesPriority && matchesModule && matchesStatus && matchesEnvironment && matchesText;
+    return matchesPriority && matchesModule && matchesStatus && matchesEnvironment && matchesTester && matchesText;
   });
 
   // Best-effort match of an AI-returned module name to a real module id for this project
@@ -442,6 +475,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
     setModuleFilter([]);
     setPriorityFilter([]);
     setStatusFilter([]);
+    setTesterFilter([]);
     setTextSearchFilter("");
     setAiSearchInput("");
   };
@@ -470,11 +504,11 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
   };
 
   // Generic field updater — saves to DB and syncs local selectedTestCase
-  const handleFieldUpdate = async (field: keyof TestCase, value: string) => {
+  const handleFieldUpdate = async (field: keyof TestCase, value: any) => {
     if (!selectedTestCase) return;
     // Special handling for screenshot_urls - parse comma-separated string to array
     if (field === "screenshot_urls") {
-      const urlsArray = value.split(", ").filter(Boolean);
+      const urlsArray = typeof value === "string" ? value.split(", ").filter(Boolean) : value;
       await updateTestCase(selectedTestCase.id, { [field]: urlsArray } as Partial<TestCase>);
       setSelectedTestCase({ ...selectedTestCase, [field]: urlsArray });
     } else {
@@ -559,13 +593,14 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
       project_id:      projectId,
       status:          "open",
       environment_id:  newTestCase.environment_id || null,
+      tester_id:       newTestCase.tester_id || null,
       screenshot_urls: newTestCase.screenshot_urls || [],
       steps:           newSteps.map((s, i) => ({ order: i + 1, action: s.action, expected: s.expected })),
       notes:           null,
       actual_result:   null,
     });
     setIsCreateOpen(false);
-    setNewTestCase({ title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_urls: [], environment_id: null });
+    setNewTestCase({ title: "", description: "", priority: "medium", expected_result: "", module_id: "", screenshot_urls: [], environment_id: null, tester_id: null });
     setNewSteps([]);
     toast.success("Test case created successfully");
   };
@@ -627,7 +662,24 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
             {aiSearchLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
             Search
           </Button>
-          {(moduleFilter.length > 0 || priorityFilter.length > 0 || statusFilter.length > 0 || textSearchFilter) && (
+
+          {/* Active Tester Selector */}
+          <div className="flex items-center gap-1.5 ml-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-muted-foreground shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            <select
+              value={activeTesterId ?? ""}
+              onChange={(e) => handleActiveTesterChange(e.target.value || null)}
+              className="h-9 rounded-lg border border-border bg-background text-xs px-2 focus:outline-none focus:ring-1 focus:ring-primary/50 min-w-[130px]"
+              title="Select who is logging bugs right now"
+            >
+              <option value="">Logging as… (none)</option>
+              {testers.filter((t) => t.project_id === projectId).map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {(moduleFilter.length > 0 || priorityFilter.length > 0 || statusFilter.length > 0 || testerFilter.length > 0 || textSearchFilter) && (
             <Button size="sm" variant="ghost" onClick={clearAllFilters} className="gap-1 h-9 text-muted-foreground">
               <XIcon className="h-3.5 w-3.5" /> Clear
             </Button>
@@ -668,6 +720,17 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
               placeholder="Priority"
             />
           </div>
+          {testers.filter((t) => t.project_id === projectId).length > 0 && (
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase">Tester</span>
+              <MultiSelect
+                options={testers.filter((t) => t.project_id === projectId).map((t) => ({ label: t.name, value: t.id }))}
+                selected={testerFilter}
+                onChange={setTesterFilter}
+                placeholder="Tester"
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-4">
@@ -715,6 +778,11 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
                 onClick={() => { setIsMoreMenuOpen(false); setIsModulesOpen(true); }}
               >
                 <Layers className="mr-2 h-3.5 w-3.5" /> Manage Modules
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => { setIsMoreMenuOpen(false); setIsTestersOpen(true); }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="mr-2 h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg> Manage Testers
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -793,7 +861,8 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
               expected_result: "", 
               module_id: "", 
               screenshot_urls: [], 
-              environment_id: null
+              environment_id: null,
+              tester_id: activeTesterId || null
             });
             setIsCreateOpen(true);
           }} size="sm" className="gap-2">
@@ -820,6 +889,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
             isSelectionMode={isSelectionMode}
             modules={modules}
             environments={environments}
+            testers={testers}
           />
         ))}
       </div>
@@ -886,6 +956,21 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
                       ><XIcon className="h-3 w-3" /></button>
                     </div>
                   )}
+
+                  {/* Tester assignment */}
+                  <select
+                    value={selectedTestCase.tester_id || ""}
+                    onChange={async (e) => {
+                      await handleFieldUpdate("tester_id", e.target.value || null);
+                    }}
+                    className="h-6 rounded border border-input bg-background px-2 text-[10px] font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    title="Assigned Tester"
+                  >
+                    <option value="">No Tester</option>
+                    {testers.filter(t => t.project_id === projectId).map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
 
                   <span className="text-xs text-muted-foreground ml-auto font-mono">{selectedTestCase.id}</span>
                 </div>
@@ -1169,6 +1254,19 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
               )}
             </div>
             <div className="space-y-1">
+              <label className="text-xs font-semibold">Tester</label>
+              <select
+                value={newTestCase.tester_id || ""}
+                onChange={(e) => setNewTestCase({ ...newTestCase, tester_id: e.target.value || null })}
+                className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="">No Tester (unassigned)</option>
+                {testers.filter((t) => t.project_id === projectId).map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
               <label className="text-xs font-semibold">Priority</label>
               <select value={newTestCase.priority} onChange={(e) => setNewTestCase({ ...newTestCase, priority: e.target.value as any })}
                 className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
@@ -1289,6 +1387,97 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
       </Dialog>
 
       {/* ── Batch Delete Confirmation Dialog ── */}
+
+      {/* ── Manage Testers Dialog ── */}
+      <Dialog open={isTestersOpen} onOpenChange={setIsTestersOpen}>
+        <DialogContent onClose={() => setIsTestersOpen(false)} className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Manage Testers</DialogTitle>
+            <DialogDescription>Add testers who work on this project. Select one from the dropdown at the top to assign yourself before logging bugs.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            {/* Existing testers list */}
+            <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+              {testers.filter((t) => t.project_id === projectId).length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-4">No testers yet. Add one below.</p>
+              )}
+              {testers.filter((t) => t.project_id === projectId).map((tester) => (
+                <div key={tester.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-border bg-muted/20 text-xs">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-muted-foreground shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                    <span className="font-medium text-foreground truncate">{tester.name}</span>
+                    {activeTesterId === tester.id && (
+                      <span className="text-[9px] bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded font-semibold shrink-0">Active</span>
+                    )}
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (confirm(`Delete tester "${tester.name}"? Bugs assigned to them will lose the tester assignment.`)) {
+                        if (activeTesterId === tester.id) setActiveTesterId(null);
+                        await deleteTester(tester.id, projectId);
+                      }
+                    }}
+                    className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                    title="Delete tester"
+                  >
+                    <Trash className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Add new tester input */}
+            <div className="pt-2 border-t border-border space-y-2">
+              <label className="text-xs font-semibold">Add New Tester</label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Tester name…"
+                  value={addingTesterName}
+                  onChange={(e) => setAddingTesterName(e.target.value)}
+                  className="text-xs h-8 flex-1"
+                  onKeyDown={async (e) => {
+                    if (e.key === "Enter" && addingTesterName.trim() && !addingTester) {
+                      setAddingTester(true);
+                      const res = await addTester(addingTesterName.trim(), projectId);
+                      if (res) {
+                        toast.success(`Tester "${addingTesterName.trim()}" added successfully`);
+                        setAddingTesterName("");
+                      } else {
+                        toast.error("Failed to add tester. Check console or DB connectivity.");
+                      }
+                      setAddingTester(false);
+                    }
+                  }}
+                />
+                <Button
+                  size="sm"
+                  disabled={!addingTesterName.trim() || addingTester}
+                  onClick={async () => {
+                    setAddingTester(true);
+                    const res = await addTester(addingTesterName.trim(), projectId);
+                    if (res) {
+                      toast.success(`Tester "${addingTesterName.trim()}" added successfully`);
+                      setAddingTesterName("");
+                    } else {
+                      toast.error("Failed to add tester. Check console or DB connectivity.");
+                    }
+                    setAddingTester(false);
+                  }}
+                >
+                  {addingTester ? "Adding…" : "Add"}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button size="sm" onClick={() => setIsTestersOpen(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Batch Delete Confirmation Dialog ── */}
       <Dialog open={isBatchDeleteOpen} onOpenChange={setIsBatchDeleteOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1323,6 +1512,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
               expected_result: bug.expected_result,
               actual_result: bug.actual_result || null,
               environment_id: null,
+              tester_id: activeTesterId || null,
               screenshot_urls: [],
               notes: null,
               module_id: bug.module_id || "",
