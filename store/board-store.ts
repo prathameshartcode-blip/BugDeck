@@ -277,7 +277,9 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
       const tc = get().testCases.find((c) => c.id === id);
       if (tc) {
         get()._syncProjectStats(tc.project_id);
-        if (updates.status) {
+        // Skip status history logging for prompt cards — they don't need audit trails
+        // and the status_history table RLS requires elevated permissions.
+        if (updates.status && tc.type !== 'prompt') {
           logStatusHistory(tc.id, tc.project_id, fromStatus, updates.status);
         }
       }
@@ -332,7 +334,8 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
     const tc = get().testCases.find((c) => c.id === activeId);
     if (tc) {
       get()._syncProjectStats(tc.project_id);
-      if (projectIdForLog) {
+      // Skip status history logging for prompt cards
+      if (projectIdForLog && tc.type !== 'prompt') {
         logStatusHistory(activeId, projectIdForLog, fromStatus, newStatus);
       }
     }
@@ -564,7 +567,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
   },
 
   _syncProjectStats: (projectId: string) => {
-    const allCases = get().testCases.filter((tc) => tc.project_id === projectId);
+    const allCases = get().testCases.filter((tc) => tc.project_id === projectId && tc.type !== "prompt");
     const total = allCases.length;
     const closed = allCases.filter((tc) => tc.status === "closed").length;
     const reopen = allCases.filter((tc) => tc.status === "reopen").length;

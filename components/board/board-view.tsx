@@ -256,7 +256,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ projectId }) => {
     }
   }, [searchParams]);
 
-  const projectCases  = testCases.filter((tc) => tc.project_id === projectId);
+  const projectCases  = testCases.filter((tc) => tc.project_id === projectId && tc.type !== "prompt");
   const filteredCases = projectCases.filter((tc) => {
     const matchesPriority = priorityFilter.length === 0 || priorityFilter.includes(tc.priority);
     const matchesModule   = moduleFilter.length === 0 || moduleFilter.includes(tc.module_id);

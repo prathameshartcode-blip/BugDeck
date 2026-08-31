@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
   const idsParam       = req.nextUrl.searchParams.get('ids');
   const dateFrom       = req.nextUrl.searchParams.get('dateFrom');
   const dateTo         = req.nextUrl.searchParams.get('dateTo');
+  const typeFilter     = req.nextUrl.searchParams.get('type');
 
   const { data: projectRow } = await supabase
     .from('projects')
@@ -39,6 +40,12 @@ export async function GET(req: NextRequest) {
     .select('*, modules(name), testers(name)')
     .eq('project_id', projectId)
     .order('created_at', { ascending: true });
+
+  if (typeFilter) {
+    query = query.eq('type', typeFilter);
+  } else {
+    query = query.neq('type', 'prompt');
+  }
 
   if (priorityFilter && priorityFilter !== 'all') {
     const priorities = priorityFilter.split(',').map(p => p.trim()).filter(Boolean);

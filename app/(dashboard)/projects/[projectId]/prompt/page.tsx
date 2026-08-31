@@ -1,0 +1,71 @@
+"use client";
+/** @jsxImportSource react */
+
+import React, { useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { PromptView } from "@/components/prompt/prompt-view";
+import { useActiveProject } from "@/hooks/use-active-project";
+import { ArrowLeft, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { EditContextDialog } from "@/components/projects/edit-context-dialog";
+
+export default function PromptPage() {
+  const params = useParams();
+  const router = useRouter();
+  const projectId = params.projectId as string;
+  const { activeProject, urlProjectId } = useActiveProject();
+  const [contextDialogOpen, setContextDialogOpen] = useState(false);
+
+  const currentProject = activeProject?.id === projectId ? activeProject : null;
+
+  if (urlProjectId === projectId && !currentProject) {
+    return (
+      <div className="flex h-60 items-center justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header bar */}
+      <div className="flex items-center justify-between border-b border-border/40 pb-4 select-none">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push(`/projects/${projectId}`)}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="space-y-0.5 text-left">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
+              Prompt Sheet — {currentProject?.name || "Project"}
+            </h1>
+            <p className="text-[10px] text-muted-foreground font-semibold">
+              Drag prompts to advance status or edit prompt instructions.
+            </p>
+          </div>
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setContextDialogOpen(true)}
+          className="gap-1.5"
+        >
+          <FileText className="h-3.5 w-3.5" /> Project Context
+        </Button>
+      </div>
+
+      <PromptView projectId={projectId} />
+
+      <EditContextDialog
+        open={contextDialogOpen}
+        onOpenChange={setContextDialogOpen}
+        projectId={projectId}
+      />
+    </div>
+  );
+}

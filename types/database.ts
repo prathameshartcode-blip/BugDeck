@@ -144,7 +144,7 @@ export type TestCase = {
   created_at: string;
   updated_at: string;
 };
-export type TestCaseType = "functional" | "performance" | "security" | "usability";
+export type TestCaseType = "functional" | "performance" | "security" | "usability" | "prompt";
 
 /** Kanban board status for a RunTest execution case. */
 export type RunTestStatus =

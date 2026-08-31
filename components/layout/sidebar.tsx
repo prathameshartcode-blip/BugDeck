@@ -8,6 +8,7 @@ import {
   FolderKanban,
   TestTube2,
   PlayCircle,
+  MessageSquare,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -51,6 +52,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       icon: PlayCircle,
       requiresProject: true,
     },
+    {
+      name: "Prompt",
+      href: activeProjectId ? `/projects/${activeProjectId}/prompt` : "/projects",
+      icon: MessageSquare,
+      requiresProject: true,
+    },
   ];
 
   return (
@@ -81,10 +88,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
         {navigation.map((item) => {
           const isBoard = item.name === "Bug Sheet";
           const isRunTest = item.name === "RunTest";
+          const isPrompt = item.name === "Prompt";
           const isActive =
             pathname === item.href ||
             (isBoard && pathname.includes("/board")) ||
-            (isRunTest && pathname.includes("/runtest"));
+            (isRunTest && pathname.includes("/runtest")) ||
+            (isPrompt && pathname.includes("/prompt"));
 
           const disabled = item.requiresProject && !projectLinksEnabled;
 
