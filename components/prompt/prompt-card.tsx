@@ -175,9 +175,9 @@ export const PromptCard: React.FC<PromptCardProps> = ({
             {testCase.title}
           </h4>
 
-          {/* Description - Spacious, pre-wrap to support big structured content nicely */}
+          {/* Description - clamp to 3 lines on the board view, no scrollbars */}
           {testCase.description && (
-            <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap font-sans break-words bg-muted/20 p-2.5 rounded-lg border border-border/40">
+            <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap font-mono break-words bg-muted/20 p-2.5 rounded-lg border border-border/40 line-clamp-3">
               {testCase.description}
             </p>
           )}

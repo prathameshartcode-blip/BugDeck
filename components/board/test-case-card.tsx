@@ -234,7 +234,7 @@ export const TestCaseCard: React.FC<TestCaseCardProps> = ({
 
           {/* Description */}
           {testCase.description && (
-            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed" >
               {testCase.description}
             </p>
           )}
